@@ -50,8 +50,8 @@ export { initializeDatabaseAsync } from './server/db';
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Initialize DB
-getDatabase();
+// DB is initialized lazily on first request (via initializeDatabaseAsync in api/index.ts)
+// Do NOT call getDatabase() here — Vercel filesystem is read-only at module load time.
 
 // -------------------------------------------------------------
   // HEALTH & SYSTEM STATUS

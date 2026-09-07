@@ -16,7 +16,11 @@ import {
 import { calculateQuota } from './quotaService';
 import { loadDbFromSupabase, saveDbToSupabase } from './supabase-adapter';
 
-const DATA_DIR = path.join(process.cwd(), 'server', 'data');
+// Use /tmp on Vercel (writable), fallback to local path in dev
+const IS_VERCEL = !!process.env.VERCEL || process.env.NODE_ENV === 'production';
+const DATA_DIR = IS_VERCEL
+  ? '/tmp/election_data'
+  : path.join(process.cwd(), 'server', 'data');
 const DB_FILE = path.join(DATA_DIR, 'election_store.json');
 
 // Interface for persistent store
