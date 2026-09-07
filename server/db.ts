@@ -14,7 +14,7 @@ import {
   CandidateResult
 } from '../src/types';
 import { calculateQuota } from './quotaService';
-import { loadDbFromFirestore, saveDbToFirestore } from './firestore-adapter';
+import { loadDbFromSupabase, saveDbToSupabase } from './supabase-adapter';
 
 const DATA_DIR = path.join(process.cwd(), 'server', 'data');
 const DB_FILE = path.join(DATA_DIR, 'election_store.json');
@@ -548,9 +548,9 @@ export function getDatabase(): DatabaseState {
 
 export function saveDatabaseToFile(): void {
   if (!dbState) return;
-  // Save to Firestore (async, fire-and-forget for sync callers)
-  saveDbToFirestore(dbState).catch(err =>
-    console.error('[db] Firestore save error:', err)
+  // Save to Supabase (async, fire-and-forget for sync callers)
+  saveDbToSupabase(dbState).catch(err =>
+    console.error('[db] Supabase save error:', err)
   );
   // Also save local file when filesystem is writable (local dev)
   try {
@@ -570,15 +570,15 @@ export function saveDatabaseToFile(): void {
 export async function initializeDatabaseAsync(): Promise<void> {
   if (dbState) return; // already loaded in this instance
   try {
-    const firestoreData = await loadDbFromFirestore();
+    const firestoreData = await loadDbFromSupabase();
     if (firestoreData) {
       dbState = firestoreData as DatabaseState;
       reEvaluateAllMembersPension();
-      console.log('[db] Loaded from Firestore.');
+      console.log('[db] Loaded from Supabase.');
       return;
     }
   } catch (err) {
-    console.warn('[db] Firestore load failed, falling back to seed:', err);
+    console.warn('[db] Supabase load failed, falling back to seed:', err);
   }
   // Fall back to local file or seed
   getDatabase();
