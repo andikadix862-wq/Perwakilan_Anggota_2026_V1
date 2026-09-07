@@ -1077,6 +1077,72 @@ export function reEvaluateAllMembersPension(): { total: number; warnings: number
   };
 }
 
+/**
+ * Auto-revoke hak_dipilih based on jabatan & pension when saving a member.
+ * Called from upsertMembers to ensure immediate qualification lock.
+ */
+export function applyMemberQualificationLock(member: Member): Member {
+  const isPegawai = checkPegawai(member.jabatan);
+  const isPengurusOrBpk = checkPengurusOrBPK(member.jabatan);
+  const pension = calculateMemberPension(
+    member.tanggal_lahir,
+    member.tanggal_pensiun,
+    undefined,
+    member.jabatan
+  );
+
+  // Pegawai: no voting rights at all
+  if (isPegawai) {
+    return {
+      ...member,
+      hak_pilih: false,
+      hak_dipilih: false,
+      is_pegawai: true,
+      is_pengurus_bpk: false,
+      alasan_hak_dipilih: 'Terdaftar sebagai Pegawai/Karyawan — Hanya Hak Memilih.',
+      is_pensiun_warning: false
+    };
+  }
+
+  // Pengurus/BPK: voting yes, cannot be candidate
+  if (isPengurusOrBpk.isPengurusBPK) {
+    return {
+      ...member,
+      hak_pilih: true,
+      hak_dipilih: false,
+      is_pegawai: false,
+      is_pengurus_bpk: true,
+      tipe_pengurus_bpk: isPengurusOrBpk.roleType,
+      alasan_hak_dipilih: `Menjabat sebagai ${isPengurusOrBpk.label} — Hanya Hak Memilih.`,
+      is_pensiun_warning: false
+    };
+  }
+
+  // Pension warning (< 4 years): voting yes, cannot be candidate
+  if (pension.is_warning) {
+    return {
+      ...member,
+      hak_pilih: true,
+      hak_dipilih: false,
+      is_pegawai: false,
+      is_pengurus_bpk: false,
+      alasan_hak_dipilih: pension.alasan_hak_dipilih,
+      is_pensiun_warning: true
+    };
+  }
+
+  // Eligible: voting yes, can be candidate
+  return {
+    ...member,
+    hak_pilih: true,
+    hak_dipilih: true,
+    is_pegawai: false,
+    is_pengurus_bpk: false,
+    alasan_hak_dipilih: 'Memenuhi syarat dicalonkan sebagai calon perwakilan.',
+    is_pensiun_warning: false
+  };
+}
+
 export function getMembers(): Member[] {
   const db = getDatabase();
   const refDate = getActiveEvaluationDate(db.config);
@@ -1598,7 +1664,7 @@ export function upsertMembers(
         }
       }
 
-      db.members[existingIndex] = {
+      db.members[existingIndex] = applyMemberQualificationLock({
         ...old,
         ...item,
         email: emailClean,
@@ -1609,10 +1675,9 @@ export function upsertMembers(
         nama_bagian: resolvedNamaBagian,
         tanggal_lahir: tglLahir || null,
         tanggal_pensiun: tglPensiun || old.tanggal_pensiun || '2036-01-01',
-        // Keep voting status unless explicitly provided
         status_memilih: item.status_memilih || old.status_memilih,
         hak_pilih: item.hak_pilih !== undefined ? item.hak_pilih : old.hak_pilih,
-      };
+      });
       updated++;
     } else {
       // Insert
@@ -1630,7 +1695,7 @@ export function upsertMembers(
         }
       }
 
-      db.members.push({
+      db.members.push(applyMemberQualificationLock({
         email: emailClean,
         nomor_anggota,
         nik: item.nik ? item.nik.trim().toUpperCase() : '',
@@ -1645,12 +1710,11 @@ export function upsertMembers(
         jabatan: item.jabatan || 'Anggota',
         telepon: item.telepon || '',
         created_at: new Date().toISOString()
-      });
+      }));
       added++;
     }
   });
 
-  reEvaluateAllMembersPension();
   saveDatabaseToFile();
 
   const divDetails = newlyCreatedDivisions.length > 0
@@ -1751,6 +1815,27 @@ export function deleteCandidate(kandidat_id: string, adminEmail = 'admin'): bool
     status: 'sukses'
   });
   return true;
+}
+
+export function deleteMember(email: string, adminEmail = 'admin'): { success: boolean; message?: string; memberName?: string } {
+  const db = getDatabase();
+  const clean = email.trim().toLowerCase();
+  const idx = db.members.findIndex(m => m.email && m.email.toLowerCase() === clean);
+  if (idx < 0) return { success: false, message: 'Anggota tidak ditemukan.' };
+  const deleted = db.members.splice(idx, 1)[0];
+  db.candidates = db.candidates.filter(c => !(c.nik === deleted.nik || c.nomor_anggota === deleted.nomor_anggota));
+  db.votes = db.votes.filter(v => v.member_email !== deleted.email);
+  saveDatabaseToFile();
+  syncDivisionStats();
+
+  addAuditLog({
+    user_email: adminEmail,
+    user_role: 'SUPER_ADMIN',
+    activity: 'HAPUS_ANGGOTA',
+    details: `Anggota ${deleted.nama} (${deleted.email}) dihapus dari database.`,
+    status: 'sukses'
+  });
+  return { success: true, message: `Anggota ${deleted.nama} berhasil dihapus.`, memberName: deleted.nama };
 }
 
 // Reset member voting status (Admin emergency/testing function with audit trail)

@@ -135,7 +135,6 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
       await api.upsertMembers([formMember], adminEmail);
       setIsAddModalOpen(false);
       fetchMembers();
-      alert('Data anggota berhasil disimpan.');
     } catch (err: any) {
       alert(err.message || 'Gagal menyimpan data anggota.');
     }
@@ -824,6 +823,22 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
                             className="p-1.5 text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Yakin hapus anggota ${m.nama} (${m.email})?\n\nTindakan ini akan menghapus data anggota, kandidat, dan suara terkait secara permanen.`)) return;
+                              try {
+                                await api.deleteMember(m.email, adminEmail);
+                                fetchMembers();
+                                alert(`Anggota ${m.nama} berhasil dihapus.`);
+                              } catch (err: any) {
+                                alert(err.message || 'Gagal menghapus anggota.');
+                              }
+                            }}
+                            title="Hapus Anggota"
+                            className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

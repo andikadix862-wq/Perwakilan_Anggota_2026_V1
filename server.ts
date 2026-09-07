@@ -34,7 +34,8 @@ import {
   syncDivisionStats,
   verifyAdminPassword,
   checkPegawai,
-  saveDatabaseToFile
+  saveDatabaseToFile,
+  deleteMember
 } from './server/db';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
@@ -887,6 +888,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     });
 
     res.json({ success: true, member });
+  });
+
+  // Delete Member (HRIS / Penghapusan Anggota)
+  app.delete('/api/admin/members/:email', (req, res) => {
+    try {
+      const { email } = req.params;
+      const adminEmail = req.body.adminEmail || 'admin';
+      const result = deleteMember(email, adminEmail);
+      if (!result.success) {
+        return res.status(404).json({ success: false, message: result.message });
+      }
+      res.json({ success: true, message: result.message, memberName: result.memberName });
+    } catch (error: any) {
+      console.error('Gagal menghapus anggota:', error);
+      res.status(500).json({ success: false, message: error.message || 'Gagal menghapus anggota.' });
+    }
   });
 
   // Reset Member Voting Status (Testing / Emergency with Audit Trail)
