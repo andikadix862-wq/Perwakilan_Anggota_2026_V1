@@ -171,6 +171,11 @@ export const api = {
     return handleJsonResponse<LoginResponse>(res);
   },
 
+  async getAvailableUsers(): Promise<{ success: boolean; admins: any[]; sampleMembers: any[]; totalMembers: number; isClean: boolean }> {
+    const res = await fetch('/api/auth/available-users');
+    return handleJsonResponse(res);
+  },
+
   // ---------------------------------------------------------------
   // VOTER DASHBOARD & VOTING
   // ---------------------------------------------------------------
