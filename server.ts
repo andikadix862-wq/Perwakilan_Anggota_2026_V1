@@ -42,6 +42,10 @@ import { calculateQuota } from './server/quotaService';
 // Export the Express app for Vercel serverless
 export const app = express();
 
+// Also export initializeDatabaseAsync for use in api/index.ts
+export { initializeDatabaseAsync } from './server/db';
+
+
 // Middlewares
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

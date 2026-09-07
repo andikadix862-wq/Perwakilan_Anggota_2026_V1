@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { initializeDatabaseAsync } from '../server/db';
-import { app } from '../server';
+
+// Import from pre-built CJS bundle (produced by `npm run build`)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { app, initializeDatabaseAsync } = require('../dist/server.cjs');
 
 let initialized = false;
 
