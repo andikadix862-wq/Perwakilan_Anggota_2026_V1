@@ -1,9 +1,8 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": null,
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "vite",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.ts" }
   ],
@@ -16,13 +15,6 @@
   "headers": [
     {
       "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
-        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
-      ]
-    },
-    {
-      "source": "/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
