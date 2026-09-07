@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": "vite",
+  "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.ts" }
   ],
@@ -12,8 +12,12 @@
       "includeFiles": "dist/server.cjs"
     }
   },
-  "crons": [],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ]
 }
