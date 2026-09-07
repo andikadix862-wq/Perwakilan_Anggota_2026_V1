@@ -7,6 +7,7 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     build: {
+      outDir: 'dist',
       rollupOptions: {
         output: {
           entryFileNames: `assets/[name]-[hash].js`,
