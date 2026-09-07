@@ -11,5 +11,9 @@
       "maxDuration": 30,
       "includeFiles": "dist/server.cjs"
     }
+  },
+  "crons": [],
+  "env": {
+    "NODE_ENV": "production"
   }
 }
