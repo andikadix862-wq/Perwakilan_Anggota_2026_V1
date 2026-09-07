@@ -851,6 +851,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     }
 
     const result = upsertMembers(members, adminEmail || 'admin');
+    saveDatabaseToFile();
     res.json({ success: true, result });
   });
 

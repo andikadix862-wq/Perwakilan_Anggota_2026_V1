@@ -1651,6 +1651,7 @@ export function upsertMembers(
   });
 
   reEvaluateAllMembersPension();
+  saveDatabaseToFile();
 
   const divDetails = newlyCreatedDivisions.length > 0
     ? ` Bagian baru dibuat otomatis: ${newlyCreatedDivisions.join(', ')}.`
