@@ -4,7 +4,6 @@ import path from 'path';
 import {defineConfig} from 'vite';
 import {readFileSync} from 'fs';
 
-// Read package.json to get a unique build identifier
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
 const buildId = Date.now().toString(36);
 
