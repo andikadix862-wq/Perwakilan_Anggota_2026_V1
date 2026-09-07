@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "ElectionConfig": {
+      "title": "ElectionConfig",
+      "description": "Konfigurasi umum sistem pemilihan",
+      "type": "object",
+      "properties": {
+        "nama_sistem": { "type": "string" },
+        "periode_pemilihan": { "type": "string" },
+        "organisasi": { "type": "string" },
+        "ratio_anggota_perwakilan": { "type": "number" },
+        "batas_tahun_sebelum_pensiun": { "type": "number" },
+        "max_vote_per_member_rule": { "type": "string" },
+        "custom_max_vote": { "type": "number" },
+        "voting_start": { "type": "string" },
+        "voting_end": { "type": "string" },
+        "voting_status": { "type": "string" },
+        "deskripsi": { "type": "string" },
+        "lokasi": { "type": "string" }
+      },
+      "required": ["nama_sistem", "periode_pemilihan", "voting_status"]
+    },
+    "Division": {
+      "title": "Division",
+      "description": "Master data bagian / divisi",
+      "type": "object",
+      "properties": {
+        "bagian_id": { "type": "string" },
+        "nama_bagian": { "type": "string" },
+        "deskripsi": { "type": "string" },
+        "total_anggota": { "type": "number" },
+        "kuota_perwakilan": { "type": "number" },
+        "manual_kuota": { "type": "number" },
+        "alasan_manual_kuota": { "type": "string" },
+        "sudah_memilih": { "type": "number" },
+        "belum_memilih": { "type": "number" },
+        "partisipasi_persen": { "type": "number" }
+      },
+      "required": ["bagian_id", "nama_bagian"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Data anggota pemilih",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "nik": { "type": "string" },
+        "nama": { "type": "string" },
+        "nomor_anggota": { "type": "string" },
+        "bagian_id": { "type": "string" },
+        "nama_bagian": { "type": "string" },
+        "status": { "type": "string" },
+        "hak_pilih": { "type": "boolean" },
+        "hak_dipilih": { "type": "boolean" },
+        "alasan_hak_dipilih": { "type": "string" },
+        "status_memilih": { "type": "string" },
+        "voted_at": { "type": "string" },
+        "transaction_id": { "type": "string" },
+        "tanggal_lahir": { "type": "string" },
+        "tanggal_pensiun": { "type": "string" },
+        "sisa_pensiun_tahun": { "type": "number" },
+        "sisa_pensiun_text": { "type": "string" },
+        "is_pensiun_warning": { "type": "boolean" },
+        "usia": { "type": "number" },
+        "jabatan": { "type": "string" },
+        "is_pengurus_bpk": { "type": "boolean" },
+        "is_pegawai": { "type": "boolean" },
+        "tipe_pengurus_bpk": { "type": "string" },
+        "telepon": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["email", "nama", "bagian_id", "status", "hak_pilih", "status_memilih"]
+    },
+    "Candidate": {
+      "title": "Candidate",
+      "description": "Data calon perwakilan",
+      "type": "object",
+      "properties": {
+        "kandidat_id": { "type": "string" },
+        "nik": { "type": "string" },
+        "nomor_anggota": { "type": "string" },
+        "nama": { "type": "string" },
+        "bagian_id": { "type": "string" },
+        "nama_bagian": { "type": "string" },
+        "status_kandidat": { "type": "string" },
+        "memenuhi_syarat": { "type": "boolean" },
+        "alasan_syarat": { "type": "string" },
+        "foto": { "type": "string" },
+        "nomor_urut": { "type": "number" },
+        "visi_misi": { "type": "string" },
+        "tanggal_lahir": { "type": "string" },
+        "tanggal_pensiun": { "type": "string" },
+        "tahun_menuju_pensiun": { "type": "number" },
+        "sisa_pensiun_tahun": { "type": "number" },
+        "sisa_pensiun_text": { "type": "string" },
+        "is_pensiun_warning": { "type": "boolean" },
+        "hak_dipilih": { "type": "boolean" },
+        "usia": { "type": "number" },
+        "jabatan": { "type": "string" },
+        "is_pengurus_bpk": { "type": "boolean" },
+        "tipe_pengurus_bpk": { "type": "string" },
+        "total_suara": { "type": "number" },
+        "persentase_suara": { "type": "number" },
+        "rank": { "type": "number" },
+        "status_terpilih": { "type": "string" }
+      },
+      "required": ["kandidat_id", "nama", "bagian_id", "status_kandidat", "nomor_urut"]
+    },
+    "VoteRecord": {
+      "title": "VoteRecord",
+      "description": "Catatan suara masuk",
+      "type": "object",
+      "properties": {
+        "vote_id": { "type": "string" },
+        "election_id": { "type": "string" },
+        "candidate_id": { "type": "string" },
+        "bagian_id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "transaction_id": { "type": "string" },
+        "status": { "type": "string" },
+        "voter_email": { "type": "string" },
+        "voter_nik": { "type": "string" }
+      },
+      "required": ["vote_id", "candidate_id", "bagian_id", "timestamp", "transaction_id", "status"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Data administrator sistem",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "nama": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "email", "nama", "role"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Jejak audit sistem",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "user_email": { "type": "string" },
+        "user_role": { "type": "string" },
+        "role": { "type": "string" },
+        "activity": { "type": "string" },
+        "event_type": { "type": "string" },
+        "details": { "type": "string" },
+        "ip_or_ua": { "type": "string" },
+        "ip_address": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "user_email", "status"]
+    },
+    "TieBreakDecision": {
+      "title": "TieBreakDecision",
+      "description": "Keputusan tie break hasil suara",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bagian_id": { "type": "string" },
+        "election_id": { "type": "string" },
+        "catatan_keputusan": { "type": "string" },
+        "resolved_by": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "bagian_id", "resolved_by"]
+    }
+  },
+  "firestore": {
+    "/config/{configId}": {
+      "schema": "ElectionConfig",
+      "description": "Koleksi konfigurasi pemilihan"
+    },
+    "/divisions/{bagian_id}": {
+      "schema": "Division",
+      "description": "Koleksi data divisi"
+    },
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Koleksi data anggota"
+    },
+    "/candidates/{kandidat_id}": {
+      "schema": "Candidate",
+      "description": "Koleksi data calon perwakilan"
+    },
+    "/votes/{vote_id}": {
+      "schema": "VoteRecord",
+      "description": "Koleksi suara voting"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminUser",
+      "description": "Koleksi admin"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Koleksi log audit"
+    },
+    "/tieBreaks/{tieBreakId}": {
+      "schema": "TieBreakDecision",
+      "description": "Koleksi keputusan tie break"
+    }
+  }
+}
