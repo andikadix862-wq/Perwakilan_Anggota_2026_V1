@@ -1,0 +1,8 @@
+{
+  "name": "Pemilihan Perwakilan Anggota 2026_New",
+  "description": "Sistem Pemilihan Anggota Perwakilan Online KOPSYAH YKK AP Indonesia Periode 2026 dengan verifikasi hak pilih, kuota otomatis, pemisahan divisi, dan pencegahan double voting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

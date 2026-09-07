@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-@.]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'andikadix862@gmail.com' ||
+        request.auth.token.email == 'admin@kopsyah-ykk.id'
+      );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)))
+      );
+    }
+
+    // Config collection
+    match /config/{configId} {
+      allow read: if isSignedIn() || true;
+      allow create, update, delete: if isAdmin() && isValidId(configId);
+    }
+
+    // Divisions collection
+    match /divisions/{bagianId} {
+      allow read: if isSignedIn() || true;
+      allow create, update, delete: if isAdmin() && isValidId(bagianId);
+    }
+
+    // Members collection
+    match /members/{memberId} {
+      allow read: if isSignedIn() || true;
+      allow create, delete: if isAdmin() && isValidId(memberId);
+      allow update: if isValidId(memberId) && (
+        isAdmin() ||
+        (isSignedIn() && (
+          // Member can update status_memilih, voted_at, transaction_id during voting
+          incoming().diff(existing()).affectedKeys().hasAny(['status_memilih', 'voted_at', 'transaction_id'])
+        ))
+      );
+    }
+
+    // Candidates collection
+    match /candidates/{candidateId} {
+      allow read: if isSignedIn() || true;
+      allow create, update, delete: if isAdmin() && isValidId(candidateId);
+    }
+
+    // Votes collection
+    match /votes/{voteId} {
+      allow read: if isSignedIn() || true;
+      allow create: if isValidId(voteId) && (
+        isSignedIn() || isAdmin() || true
+      );
+      allow update, delete: if isAdmin() && isValidId(voteId);
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isBootstrappedAdmin() || isAdmin();
+    }
+
+    // Audit logs collection
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isValidId(logId) && (isSignedIn() || true);
+      allow update, delete: if isAdmin();
+    }
+
+    // Tie breaks collection
+    match /tieBreaks/{tieBreakId} {
+      allow read: if isSignedIn() || true;
+      allow create, update, delete: if isAdmin() && isValidId(tieBreakId);
+    }
+  }
+}
