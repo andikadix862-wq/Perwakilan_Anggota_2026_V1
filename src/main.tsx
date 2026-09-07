@@ -7,7 +7,7 @@ import './index.css';
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event && event.reason;
-    const msg = (reason && (reason.message || reason.stack || String(reason))) || '';
+    const msg = (reason && (reason.message || event.stack || String(reason))) || '';
     if (
       msg.includes('WebSocket') ||
       msg.includes('websocket') ||
@@ -24,5 +24,3 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-// rebuild 1788769190
-
