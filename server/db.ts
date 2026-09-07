@@ -1083,63 +1083,42 @@ export function reEvaluateAllMembersPension(): { total: number; warnings: number
  */
 export function applyMemberQualificationLock(member: Member): Member {
   const isPegawai = checkPegawai(member.jabatan);
-  const isPengurusOrBpk = checkPengurusOrBPK(member.jabatan);
-  const pension = calculateMemberPension(
-    member.tanggal_lahir,
-    member.tanggal_pensiun,
-    undefined,
-    member.jabatan
-  );
+  const pengurusCheck = checkPengurusOrBPK(member.jabatan);
 
-  // Pegawai: no voting rights at all
+  // Calculate pension status inline (same logic as enrichMemberPension)
+  let is_pensiun_warning = false;
+  let alasan_hak_dipilih = '';
+
   if (isPegawai) {
-    return {
-      ...member,
-      hak_pilih: false,
-      hak_dipilih: false,
-      is_pegawai: true,
-      is_pengurus_bpk: false,
-      alasan_hak_dipilih: 'Terdaftar sebagai Pegawai/Karyawan — Hanya Hak Memilih.',
-      is_pensiun_warning: false
-    };
+    alasan_hak_dipilih = 'Terdaftar sebagai Pegawai/Karyawan — Hanya Hak Memilih.';
+  } else if (pengurusCheck.isPengurusBPK) {
+    alasan_hak_dipilih = `Menjabat sebagai ${pengurusCheck.label} — Hanya Hak Memilih.`;
+  } else if (member.tanggal_lahir) {
+    const dob = new Date(`${member.tanggal_lahir}T00:00:00`);
+    if (!isNaN(dob.getTime())) {
+      const pensiunDate = new Date(dob);
+      pensiunDate.setFullYear(pensiunDate.getFullYear() + RETIREMENT_AGE);
+      const now = new Date();
+      const diffYears = (pensiunDate.getTime() - now.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      is_pensiun_warning = diffYears < 4;
+      if (is_pensiun_warning) {
+        alasan_hak_dipilih = `Sisa pensiun kurang dari 4 tahun — Hanya Hak Memilih.`;
+      }
+    }
   }
 
-  // Pengurus/BPK: voting yes, cannot be candidate
-  if (isPengurusOrBpk.isPengurusBPK) {
-    return {
-      ...member,
-      hak_pilih: true,
-      hak_dipilih: false,
-      is_pegawai: false,
-      is_pengurus_bpk: true,
-      tipe_pengurus_bpk: isPengurusOrBpk.roleType,
-      alasan_hak_dipilih: `Menjabat sebagai ${isPengurusOrBpk.label} — Hanya Hak Memilih.`,
-      is_pensiun_warning: false
-    };
-  }
+  const hak_dipilih = !isPegawai && !pengurusCheck.isPengurusBPK && !is_pensiun_warning;
+  const hak_pilih = member.status === 'AKTIF';
 
-  // Pension warning (< 4 years): voting yes, cannot be candidate
-  if (pension.is_warning) {
-    return {
-      ...member,
-      hak_pilih: true,
-      hak_dipilih: false,
-      is_pegawai: false,
-      is_pengurus_bpk: false,
-      alasan_hak_dipilih: pension.alasan_hak_dipilih,
-      is_pensiun_warning: true
-    };
-  }
-
-  // Eligible: voting yes, can be candidate
   return {
     ...member,
-    hak_pilih: true,
-    hak_dipilih: true,
-    is_pegawai: false,
-    is_pengurus_bpk: false,
-    alasan_hak_dipilih: 'Memenuhi syarat dicalonkan sebagai calon perwakilan.',
-    is_pensiun_warning: false
+    hak_pilih,
+    hak_dipilih,
+    is_pegawai: isPegawai,
+    is_pengurus_bpk: pengurusCheck.isPengurusBPK,
+    tipe_pengurus_bpk: pengurusCheck.roleType,
+    alasan_hak_dipilih,
+    is_pensiun_warning
   };
 }
 
