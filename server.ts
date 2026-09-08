@@ -28,6 +28,20 @@ import {
   saveTieBreakDecision,
   validateCandidatePensionEligibility,
   getVotes,
+  // Relational database service
+  getAllMembers,
+  getMemberByEmail as getMemberByEmailRelational,
+  getAllDivisions,
+  getAllCandidates,
+  getCandidatesByDivision,
+  getAllAdmins,
+  getAdminByEmail,
+  getAllConfig,
+  getAllVotes,
+  getVoteByMember,
+  insertVote,
+  getDashboardStats as getDashboardStatsRelational,
+} from './database-service';
   upsertDivision,
   deleteDivision,
   reEvaluateAllMembersPension,
@@ -313,50 +327,55 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   // VOTER PORTAL ROUTES (PRD SECTION 11, 12, 13, 14, 15, 16)
   // -------------------------------------------------------------
   // Get Voter Overview & Quota Details
-  app.get('/api/voter/dashboard', (req, res) => {
-    const email = req.query.email as string;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email diperlukan.' });
-    }
-
-    const member = getMemberByEmail(email);
-    if (!member) {
-      return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
-    }
-
-    const config = getConfig();
-    const allMembers = getMembers();
-    const divisionMembers = allMembers.filter(m => m.bagian_id === member.bagian_id);
-    const divisionQuota = calculateQuota(divisionMembers.length, config.ratio_anggota_perwakilan);
-
-    // Candidates in this division
-    const divisionCandidates = getCandidates(member.bagian_id).filter(c => c.status_kandidat === 'AKTIF');
-
-    // STRICT PRD & USER RULE:
-    // 1 ANGGOTA = 1 SUARA = 1 KANDIDAT
-    // Rasio 10:1 HANYA untuk menentukan kuota kursi perwakilan bagian
-    const maxVotes = 1;
-
-    res.json({
-      success: true,
-      member,
-      config: {
-        nama_sistem: config.nama_sistem,
-        periode_pemilihan: config.periode_pemilihan,
-        organisasi: config.organisasi,
-        voting_status: config.voting_status,
-        voting_start: config.voting_start,
-        voting_end: config.voting_end
-      },
-      division_info: {
-        bagian_id: member.bagian_id,
-        nama_bagian: member.nama_bagian,
-        total_anggota_bagian: divisionMembers.length,
-        kuota_kursi: divisionQuota,
-        max_pilihan_diizinkan: maxVotes,
-        total_kandidat_aktif: divisionCandidates.length
+  app.get('/api/voter/dashboard', async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email diperlukan.' });
       }
-    });
+
+      const member = await getMemberByEmailRelational(email);
+      if (!member) {
+        return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
+      }
+
+      const config = await getAllConfig();
+      const allMembers = await getAllMembers();
+      const divisionMembers = allMembers.filter(m => m.bagian_id === member.bagian_id);
+      const divisionQuota = calculateQuota(divisionMembers.length, config.ratio_anggota_perwakilan || 10);
+
+      // Candidates in this division
+      const divisionCandidates = (await getCandidatesByDivision(member.bagian_id)).filter(c => c.status_kandidat === 'AKTIF');
+
+      // STRICT PRD & USER RULE:
+      // 1 ANGGOTA = 1 SUARA = 1 KANDIDAT
+      // Rasio 10:1 HANYA untuk menentukan kuota kursi perwakilan bagian
+      const maxVotes = 1;
+
+      res.json({
+        success: true,
+        member,
+        config: {
+          nama_sistem: config.nama_sistem || 'Sistem Pemilihan Anggota Perwakilan',
+          periode_pemilihan: config.periode_pemilihan || '2026-2027',
+          organisasi: config.organisasi || 'KOPSYAH YKK AP Indonesia',
+          voting_status: config.voting_status || 'AKTIF',
+          voting_start: config.voting_start || '',
+          voting_end: config.voting_end || ''
+        },
+        division_info: {
+          bagian_id: member.bagian_id,
+          nama_bagian: member.nama_bagian,
+          total_anggota_bagian: divisionMembers.length,
+          kuota_kursi: divisionQuota,
+          max_pilihan_diizinkan: maxVotes,
+          total_kandidat_aktif: divisionCandidates.length
+        }
+      });
+    } catch (error) {
+      console.error('Voter dashboard error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil data dashboard pemilih' });
+    }
   });
 
   // Get Candidates for Member (STRICT: ONLY candidates from member's division)
@@ -808,41 +827,51 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   // ADMIN DASHBOARD & MANAGEMENT ROUTES
   // -------------------------------------------------------------
   // Executive Dashboard Stats
-  app.get('/api/admin/dashboard', (req, res) => {
-    const stats = getDashboardStats();
-    res.json({ success: true, stats });
+  app.get('/api/admin/dashboard', async (req, res) => {
+    try {
+      const stats = await getDashboardStatsRelational();
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Dashboard stats error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil statistik' });
+    }
   });
 
   // Members List
-  app.get('/api/admin/members', (req, res) => {
-    const { search, bagian_id, status_memilih, hak_pilih } = req.query;
-    let list = getMembers();
+  app.get('/api/admin/members', async (req, res) => {
+    try {
+      const { search, bagian_id, status_memilih, hak_pilih } = req.query;
+      let list = await getAllMembers();
 
-    if (search && typeof search === 'string') {
-      const q = search.toLowerCase();
-      list = list.filter(
-        m =>
-          m.nama.toLowerCase().includes(q) ||
-          m.email.toLowerCase().includes(q) ||
-          m.nik.toLowerCase().includes(q) ||
-          m.nomor_anggota.toLowerCase().includes(q)
-      );
+      if (search && typeof search === 'string') {
+        const q = search.toLowerCase();
+        list = list.filter(
+          m =>
+            m.nama.toLowerCase().includes(q) ||
+            m.email.toLowerCase().includes(q) ||
+            (m.nik && m.nik.toLowerCase().includes(q)) ||
+            m.nomor_anggota.toLowerCase().includes(q)
+        );
+      }
+
+      if (bagian_id && typeof bagian_id === 'string' && bagian_id !== 'ALL') {
+        list = list.filter(m => m.bagian_id === bagian_id);
+      }
+
+      if (status_memilih && typeof status_memilih === 'string' && status_memilih !== 'ALL') {
+        list = list.filter(m => m.status_memilih === status_memilih);
+      }
+
+      if (hak_pilih !== undefined && hak_pilih !== 'ALL') {
+        const boolVal = hak_pilih === 'true';
+        list = list.filter(m => m.hak_pilih === boolVal);
+      }
+
+      res.json({ success: true, total: list.length, members: list });
+    } catch (error) {
+      console.error('Get members error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil data anggota' });
     }
-
-    if (bagian_id && typeof bagian_id === 'string' && bagian_id !== 'ALL') {
-      list = list.filter(m => m.bagian_id === bagian_id);
-    }
-
-    if (status_memilih && typeof status_memilih === 'string' && status_memilih !== 'ALL') {
-      list = list.filter(m => m.status_memilih === status_memilih);
-    }
-
-    if (hak_pilih !== undefined && hak_pilih !== 'ALL') {
-      const boolVal = hak_pilih === 'true';
-      list = list.filter(m => m.hak_pilih === boolVal);
-    }
-
-    res.json({ success: true, total: list.length, members: list });
   });
 
   // Upsert Members / Bulk Import (PRD Section 24)
@@ -1113,16 +1142,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Available Users for Login / Quick Select
-  app.get('/api/auth/available-users', (req, res) => {
-    const admins = getAdmins();
-    const members = getMembers();
-    res.json({
-      success: true,
-      admins,
-      sampleMembers: members.slice(0, 6),
-      totalMembers: members.length,
-      isClean: members.length === 0
-    });
+  app.get('/api/auth/available-users', async (req, res) => {
+    try {
+      const admins = await getAllAdmins();
+      const members = await getAllMembers();
+      res.json({
+        success: true,
+        admins,
+        sampleMembers: members.slice(0, 6),
+        totalMembers: members.length,
+        isClean: members.length === 0
+      });
+    } catch (error) {
+      console.error('Available users error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil data pengguna' });
+    }
   });
 
   // Run Automated PRD Test Suite (PRD Section 39)
