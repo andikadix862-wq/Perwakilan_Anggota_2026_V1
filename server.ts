@@ -28,7 +28,9 @@ import {
   saveTieBreakDecision,
   validateCandidatePensionEligibility,
   getVotes,
-  // Relational database service
+} from './db';
+// Relational database service
+import {
   getAllMembers,
   getMemberByEmail as getMemberByEmailRelational,
   getAllDivisions,
@@ -42,6 +44,14 @@ import {
   insertVote,
   getDashboardStats as getDashboardStatsRelational,
 } from './database-service';
+// Vote service
+import {
+  processVoteSubmission,
+  createVotesTable,
+  getAllVotesByDivision,
+  getVoteCount,
+  subscribeToVotes
+} from './vote-service';
   upsertDivision,
   deleteDivision,
   reEvaluateAllMembersPension,
@@ -1110,10 +1120,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Monitoring: Real-time Votes Feed (PRD Section 17 & 20)
-  app.get('/api/admin/votes', (req, res) => {
-    const { bagian_id } = req.query;
-    const votes = getVotes(typeof bagian_id === 'string' ? bagian_id : undefined);
-    res.json({ success: true, total: votes.length, votes });
+  app.get('/api/admin/votes', async (req, res) => {
+    try {
+      const { bagian_id } = req.query;
+      const votes = await getAllVotesByDivision(typeof bagian_id === 'string' ? bagian_id : undefined);
+      res.json({ success: true, total: votes.length, votes });
+    } catch (error) {
+      console.error('Error fetching votes:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil data suara' });
+    }
   });
 
   // Audit Logs (PRD Section 28)
