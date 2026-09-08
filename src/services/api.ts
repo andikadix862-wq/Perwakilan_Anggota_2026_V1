@@ -381,6 +381,11 @@ export const api = {
     return handleJsonResponse(res);
   },
 
+  // Alias untuk compatibility dengan frontend yang memanggil getAdminStats
+  async getAdminStats(adminEmail?: string): Promise<{ success: boolean; stats: DashboardStats }> {
+    return this.getDashboard(adminEmail);
+  },
+
   async getResults(adminEmail?: string): Promise<{ success: boolean; results: DivisionResult[] }> {
     const res = await fetch('/api/admin/results', {
       headers: getAdminRequestHeaders(adminEmail)
