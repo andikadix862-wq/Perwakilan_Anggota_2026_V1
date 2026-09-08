@@ -46,11 +46,14 @@ import {
 } from './database-service';
 // Vote service
 import {
-  processVoteSubmission,
-  createVotesTable,
-  getAllVotesByDivision,
+  submitVote,
+  getAllVotes,
+  getVotesByDivision,
   getVoteCount,
-  subscribeToVotes
+  getVoteCountByDivision,
+  getVoteByMember,
+  subscribeToVotes,
+  subscribeToVotesChanges
 } from './vote-service';
   upsertDivision,
   deleteDivision,
@@ -423,14 +426,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   // Submit Ballot / Vote (PRD Section 14, 15, 16, 17)
   app.post('/api/voter/submit-vote', async (req, res) => {
     try {
-      const { email, candidate_ids } = req.body;
+      const { candidate_id } = req.body;
+      const email = req.query.email as string; // From authenticated session
       const ip_or_ua = (req.headers['user-agent'] as string) || req.ip;
 
-      const result = await processVoteSubmission({
-        email,
-        candidate_ids,
-        ip_or_ua
-      });
+      if (!candidate_id) {
+        return res.status(400).json({ success: false, message: 'Kandidat harus dipilih.' });
+      }
+
+      const result = await submitVote({ email, candidate_id, ip_or_ua });
 
       if (!result.success) {
         return res.status(400).json(result);
@@ -1123,7 +1127,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.get('/api/admin/votes', async (req, res) => {
     try {
       const { bagian_id } = req.query;
-      const votes = await getAllVotesByDivision(typeof bagian_id === 'string' ? bagian_id : undefined);
+      const votes = await getVotesByDivision(typeof bagian_id === 'string' ? bagian_id : undefined);
       res.json({ success: true, total: votes.length, votes });
     } catch (error) {
       console.error('Error fetching votes:', error);
