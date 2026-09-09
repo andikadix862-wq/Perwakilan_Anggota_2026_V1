@@ -6,8 +6,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { DatabaseState, Member, Candidate, Division, AdminUser, ElectionConfig } from '../src/types';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+// Use server-side environment variables (no VITE_ prefix for service role key)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Diagnostic: Check environment
+if (!SUPABASE_URL) {
+  console.error('[RelationalInit] ERROR: SUPABASE_URL is not configured');
+}
+if (!SUPABASE_KEY) {
+  console.error('[RelationalInit] ERROR: SUPABASE_SERVICE_ROLE_KEY is not configured');
+  console.error('[RelationalInit]   Checked: SUPABASE_SERVICE_ROLE_KEY, VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY');
+} else {
+  console.log('[RelationalInit] SERVICE_ROLE_KEY length:', SUPABASE_KEY.length, '(should be ~200)');
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
@@ -67,7 +79,19 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
     election_type: configMap.election_type || 'PEMILIHAN_PERWAKILAN'
   } as ElectionConfig;
   
+  // Diagnostic: Log counts (not individual data)
   console.log(`[RelationalInit] Loaded: ${members.length} members, ${candidates.length} candidates, ${divisions.length} divisions, ${admins.length} admins`);
+  
+  // Verify expected counts
+  if (members.length !== 436) {
+    console.warn(`[RelationalInit] WARNING: Expected 436 members, got ${members.length}`);
+  }
+  if (candidates.length !== 436) {
+    console.warn(`[RelationalInit] WARNING: Expected 436 candidates, got ${candidates.length}`);
+  }
+  if (divisions.length !== 16) {
+    console.warn(`[RelationalInit] WARNING: Expected 16 divisions, got ${divisions.length}`);
+  }
   
   return {
     members,

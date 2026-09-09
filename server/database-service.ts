@@ -6,12 +6,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Member, Division, Candidate, ElectionConfig, VoteRecord, AdminUser, DashboardStats } from '../src/types';
 
-// Use SERVICE_ROLE_KEY to bypass RLS on all tables
-const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+// Use server-side environment variables (no VITE_ prefix for service role key)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
 
-console.log('[DatabaseService] Initializing with SUPABASE_URL:', SUPABASE_URL ? 'SET' : 'NOT SET');
-console.log('[DatabaseService] Initializing with SERVICE_ROLE_KEY:', SUPABASE_KEY ? 'SET' : 'NOT SET');
+// Diagnostic
+if (!SUPABASE_URL) {
+  console.error('[DatabaseService] ERROR: SUPABASE_URL is not configured');
+}
+if (!SUPABASE_KEY) {
+  console.error('[DatabaseService] ERROR: SUPABASE_SERVICE_ROLE_KEY is not configured');
+  console.error('[DatabaseService]   Checked: SUPABASE_SERVICE_ROLE_KEY, VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY');
+} else {
+  console.log('[DatabaseService] SERVICE_ROLE_KEY length:', SUPABASE_KEY.length, '(should be ~200)');
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }

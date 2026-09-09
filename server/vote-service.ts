@@ -12,8 +12,9 @@ import { createClient } from '@supabase/supabase-js';
 import type { VoteRecord, Member, Candidate } from '../src/types';
 import { validateMemberToken, AuthenticatedMember } from './voting-auth';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+// Use server-side environment variables (no VITE_ prefix for service role key)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }

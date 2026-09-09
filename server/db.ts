@@ -568,13 +568,14 @@ export function saveDatabaseToFile(): void {
 }
 
 /**
- * Initialize database from relational tables OR fallback to Supabase JSON blob.
- * This ensures production always uses relational tables as primary source.
+ * Initialize database from Supabase relational tables ONLY.
+ * Production FAILS LOUDLY if Supabase is unavailable.
+ * NO FALLBACK to system_state or local seed.
  */
 export async function initializeDatabaseAsync(): Promise<void> {
   if (dbState) return; // already loaded in this instance
 
-  // Step 1: Try relational tables first (PRIMARY for production)
+  // PRIMARY: Load from Supabase relational tables
   try {
     const { initializeDatabaseFromRelational } = await import('./relational-init');
     const relationalData = await initializeDatabaseFromRelational();
@@ -585,24 +586,12 @@ export async function initializeDatabaseAsync(): Promise<void> {
       return;
     }
   } catch (err) {
-    console.warn('[db] Relational load failed, falling back to system_state:', err);
+    console.error('[db] CRITICAL: Failed to load from relational tables:', err);
+    throw new Error(`Database initialization failed: ${err.message}`);
   }
 
-  // Step 2: Fallback to system_state JSON blob
-  try {
-    const firestoreData = await loadDbFromSupabase();
-    if (firestoreData) {
-      dbState = firestoreData as DatabaseState;
-      reEvaluateAllMembersPension();
-      console.log('[db] Loaded from Supabase system_state (fallback).');
-      return;
-    }
-  } catch (err) {
-    console.warn('[db] Supabase load failed:', err);
-  }
-
-  // Step 3: Final fallback to local seed
-  getDatabase();
+  // NO FALLBACK - production must fail loudly
+  throw new Error('CRITICAL: Database initialization failed. Relational tables returned no data.');
 }
 
 // Synchronize candidates automatically with all registered members
