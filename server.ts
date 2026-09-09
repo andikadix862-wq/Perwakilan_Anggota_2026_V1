@@ -55,7 +55,8 @@ import {
   subscribeToVotes,
   subscribeToVotesChanges
 } from './server/vote-service';
-import { validateMemberToken, AuthenticatedMember } from './server/voting-auth';
+import { validateSession, AuthenticatedMember, SessionValidationResult } from './server/voting-auth';
+import { createSessionToken } from './server/session-manager';
 import {
   upsertDivision,
   deleteDivision,
@@ -220,7 +221,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
           voting_status: config.voting_status,
           periode: config.periode_pemilihan
         },
-        token: `MBR_TOKEN_${Date.now()}_${Math.random().toString(36).substring(2)}`
+        token: createSessionToken(member.email)
       });
     } catch (err: any) {
       console.error('Error during login:', err);
@@ -304,7 +305,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         success: true,
         type: 'admin',
         user: adminMatch,
-        token: `ADM_TOKEN_${Date.now()}_${Math.random().toString(36).substring(2)}`
+        token: createSessionToken(adminMatch.email)
       });
     } catch (err: any) {
       console.error('Error during admin login:', err);
@@ -453,13 +454,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         return res.status(400).json({ success: false, message: 'Kandidat harus dipilih.' });
       }
 
-      // Validate member token
-      const member = await validateMemberToken(authHeader);
-      if (!member) {
+      // Validate session token (cryptographically secure)
+      const session = await validateSession(authHeader);
+      if (!session.success || !session.member) {
         return res.status(401).json({ success: false, message: 'Sesi tidak valid. Silakan login kembali.' });
       }
 
-      const result = await submitVote({ member, candidate_id, ip_or_ua });
+      const result = await submitVote({ member: session.member, candidate_id, ip_or_ua });
 
       if (!result.success) {
         return res.status(400).json(result);

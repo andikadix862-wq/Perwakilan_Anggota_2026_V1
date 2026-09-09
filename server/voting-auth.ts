@@ -1,9 +1,10 @@
 /**
  * Voting Authentication Middleware
- * Validates member token from Authorization header
+ * Validates session tokens from Authorization header
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { validateSessionToken, AuthenticatedMember } from './session-manager';
 
 // Use service role key for server-side validation
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
@@ -16,31 +17,30 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
-export interface AuthenticatedMember {
-  email: string;
-  nomor_anggota: string;
-  nama: string;
-  bagian_id: string;
-  nama_bagian: string;
-  status_memilih: string;
+export interface SessionValidationResult {
+  success: boolean;
+  member?: AuthenticatedMember;
+  error?: string;
 }
 
 /**
- * Validate member token from Authorization header
- * Token format: Bearer <member_email> (for now, using email as token)
- * In production, this should be a JWT or secure session token
+ * Validate session token from Authorization header
+ * Token format: Bearer <cryptographically_secure_token>
  */
-export async function validateMemberToken(authHeader: string | undefined): Promise<AuthenticatedMember | null> {
+export async function validateSession(authHeader: string | undefined): Promise<SessionValidationResult> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
+    return { success: false, error: 'Invalid or missing authorization header' };
   }
 
-  const token = authHeader.substring(7).trim(); // Remove "Bearer "
+  const token = authHeader.substring(7).trim();
   
-  // For now, token IS the email (after login validation)
-  // In production, decode JWT or lookup session
-  const email = token.toLowerCase();
-  
+  // Validate token and get email
+  const { email, valid } = validateSessionToken(token);
+  if (!valid || !email) {
+    return { success: false, error: 'Invalid or expired session token' };
+  }
+
+  // Look up member details from database
   try {
     const { data: member, error } = await supabase.from('members')
       .select('email, nomor_anggota, nama, bagian_id, nama_bagian, status_memilih')
@@ -48,30 +48,18 @@ export async function validateMemberToken(authHeader: string | undefined): Promi
       .single();
     
     if (error || !member) {
-      return null;
+      return { success: false, error: 'Member not found' };
     }
     
-    return member as AuthenticatedMember;
+    return { success: true, member: member as AuthenticatedMember };
   } catch (err) {
-    console.error('[Auth] Token validation error:', err);
-    return null;
+    console.error('[Auth] Session validation error:', err);
+    return { success: false, error: 'Session validation failed' };
   }
 }
 
 /**
- * Alternative: Validate using email + token from login
- * If login returns a token, use that for validation
- */
-export async function validateLoginToken(token: string): Promise<AuthenticatedMember | null> {
-  if (!token) return null;
-  
-  // Token format: member_email (from login response)
-  // In production: decode JWT or validate session
-  return validateMemberToken(`Bearer ${token}`);
-}
-
-/**
- * Get member by email (for backward compatibility during transition)
+ * Get member by email (for backward compatibility)
  */
 export async function getMemberByEmail(email: string): Promise<AuthenticatedMember | null> {
   try {
