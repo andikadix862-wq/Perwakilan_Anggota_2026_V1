@@ -6,8 +6,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Member, Division, Candidate, ElectionConfig, VoteRecord, AdminUser, DashboardStats } from '../src/types';
 
+// Use SERVICE_ROLE_KEY to bypass RLS on all tables
 const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+
+console.log('[DatabaseService] Initializing with SUPABASE_URL:', SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('[DatabaseService] Initializing with SERVICE_ROLE_KEY:', SUPABASE_KEY ? 'SET' : 'NOT SET');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
