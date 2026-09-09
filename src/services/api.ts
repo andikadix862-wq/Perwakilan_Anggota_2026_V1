@@ -185,6 +185,11 @@ export const api = {
     return handleJsonResponse<VoterDashboardResponse>(res);
   },
 
+  async getVoterCandidates(email: string): Promise<any> {
+    const res = await fetch(`/api/voter/candidates?email=${encodeURIComponent(email)}`);
+    return handleJsonResponse(res);
+  },
+
   async submitVote(candidate_id: string, token: string): Promise<SubmitVoteResponse> {
     const res = await fetch('/api/voter/submit-vote', {
       method: 'POST',
@@ -195,6 +200,13 @@ export const api = {
       body: JSON.stringify({ candidate_id })
     });
     return handleJsonResponse<SubmitVoteResponse>(res);
+  },
+
+  logoutAdmin(): void {
+    localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+    localStorage.removeItem('kopsyah_user');
+    localStorage.removeItem('kopsyah_token');
+    localStorage.removeItem('kopsyah_type');
   },
 
   async verifyTransaction(transactionId: string): Promise<{ success: boolean; transaction_id: string; member_name: string; bagian: string; timestamp: string }> {
