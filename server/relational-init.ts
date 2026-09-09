@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { DatabaseState, Member, Candidate, Division, AdminUser, ElectionConfig } from '../src/types';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }

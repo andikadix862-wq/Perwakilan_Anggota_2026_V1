@@ -13,7 +13,7 @@ import type { VoteRecord, Member, Candidate } from '../src/types';
 import { validateMemberToken, AuthenticatedMember } from './voting-auth';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
