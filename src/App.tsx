@@ -191,7 +191,8 @@ export function App() {
     localStorage.removeItem('kopsyah_token');
     setStoredAdminAuth(null);
     api.logoutAdmin();
-    setCurrentView('login');
+    // Force reload to ensure clean state
+    window.location.href = '/';
   };
 
   const handleStartVoting = () => {
