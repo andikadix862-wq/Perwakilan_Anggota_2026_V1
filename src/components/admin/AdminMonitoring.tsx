@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Activity,
   RefreshCw,
@@ -18,6 +18,7 @@ import {
 import { api } from '../../services/api';
 import { Division, DashboardStats } from '../../types';
 import { AdminResetModal } from './AdminResetModal';
+import { createClient } from '@supabase/supabase-js';
 
 interface RealtimeVoteItem {
   vote_id: string;
@@ -33,6 +34,11 @@ interface AdminMonitoringProps {
   onRefreshData?: () => void;
 }
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_SUPABASE_URL || '';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_SUPABASE_ANON_KEY || '';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = 'admin@kopsyah-ykk.id', onRefreshData }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -41,6 +47,7 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
   const [filterBagian, setFilterBagian] = useState<string>('ALL');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
 
   // Reset Vote Modal state
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -49,6 +56,9 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
 
   // Manual reset search input
   const [manualSearchTarget, setManualSearchTarget] = useState('');
+
+  // Realtime channel ref
+  const channelRef = useRef<any>(null);
 
   const fetchData = async () => {
     try {
@@ -68,14 +78,40 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
     }
   };
 
+  // Setup Supabase Realtime subscription
   useEffect(() => {
+    // Initial fetch
     fetchData();
+
+    // Setup realtime subscription
+    channelRef.current = supabase.channel('admin_votes_changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'votes' },
+        (payload) => {
+          const newVote = payload.new as RealtimeVoteItem;
+          // Add to votes list without full refetch
+          setVotes(prev => [newVote, ...prev]);
+          // Refresh stats to get updated counts
+          fetchData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('[AdminMonitoring] Realtime status:', status);
+        setRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
   }, [filterBagian]);
 
-  // Auto-refresh interval
+  // Auto-refresh interval (fallback only, less frequent)
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(fetchData, 30000); // 30 seconds fallback
     return () => clearInterval(interval);
   }, [autoRefresh, filterBagian]);
 
@@ -90,7 +126,7 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold uppercase tracking-wider mb-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={`w-2 h-2 rounded-full animate-pulse ${realtimeConnected ? 'bg-emerald-500' : 'bg-gray-400'}`} />
               <Activity className="w-3.5 h-3.5 text-emerald-700" />
               <span>Monitoring Real-Time Pemilihan</span>
             </div>
@@ -103,19 +139,17 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
           </div>
 
           <div className="flex items-center gap-3 self-start sm:self-center">
-            {/* Auto refresh toggle */}
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-colors flex items-center gap-2 ${
-                autoRefresh
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                  : 'bg-gray-50 text-gray-600 border-gray-300'
-              }`}
-            >
-              <Radio className={`w-3.5 h-3.5 ${autoRefresh ? 'text-emerald-600 animate-pulse' : 'text-gray-400'}`} />
-              <span>{autoRefresh ? 'Live Sync (5s)' : 'Manual Sync'}</span>
-            </button>
+            {/* Realtime status indicator */}
+            <div className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-colors flex items-center gap-2 ${
+              realtimeConnected
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-amber-50 text-amber-800 border-amber-300'
+            }`}>
+              <Radio className={`w-3.5 h-3.5 ${realtimeConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-400'}`} />
+              <span>{realtimeConnected ? 'Live Connected' : 'Connecting...'}</span>
+            </div>
 
+            {/* Fallback manual refresh */}
             <button
               onClick={fetchData}
               className="p-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-2xs transition-colors"

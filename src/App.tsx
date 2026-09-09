@@ -287,6 +287,7 @@ export function App() {
           ) : (
             <VotingPage
               member={currentUser as Member}
+              token={token}
               onBack={handleBackToDashboard}
               onVoteSuccess={handleVoteSuccess}
             />

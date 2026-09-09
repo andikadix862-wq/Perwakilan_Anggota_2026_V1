@@ -185,11 +185,14 @@ export const api = {
     return handleJsonResponse<VoterDashboardResponse>(res);
   },
 
-  async submitVote(email: string, candidate_ids: string[]): Promise<SubmitVoteResponse> {
-    const res = await fetch('/api/vote', {
+  async submitVote(candidate_id: string, token: string): Promise<SubmitVoteResponse> {
+    const res = await fetch('/api/voter/submit-vote', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, candidate_ids })
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ candidate_id })
     });
     return handleJsonResponse<SubmitVoteResponse>(res);
   },

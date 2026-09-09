@@ -28,7 +28,7 @@ import {
   saveTieBreakDecision,
   validateCandidatePensionEligibility,
   getVotes,
-} from './db';
+} from './server/db';
 // Relational database service
 import {
   getAllMembers,
@@ -43,7 +43,7 @@ import {
   getVoteByMember,
   insertVote,
   getDashboardStats as getDashboardStatsRelational,
-} from './database-service';
+} from './server/database-service';
 // Vote service
 import {
   submitVote,
@@ -54,7 +54,9 @@ import {
   getVoteByMember,
   subscribeToVotes,
   subscribeToVotesChanges
-} from './vote-service';
+} from './server/vote-service';
+import { validateMemberToken, AuthenticatedMember } from './server/voting-auth';
+import {
   upsertDivision,
   deleteDivision,
   reEvaluateAllMembersPension,
@@ -427,14 +429,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.post('/api/voter/submit-vote', async (req, res) => {
     try {
       const { candidate_id } = req.body;
-      const email = req.query.email as string; // From authenticated session
+      const authHeader = req.headers.authorization;
       const ip_or_ua = (req.headers['user-agent'] as string) || req.ip;
 
       if (!candidate_id) {
         return res.status(400).json({ success: false, message: 'Kandidat harus dipilih.' });
       }
 
-      const result = await submitVote({ email, candidate_id, ip_or_ua });
+      // Validate member token
+      const member = await validateMemberToken(authHeader);
+      if (!member) {
+        return res.status(401).json({ success: false, message: 'Sesi tidak valid. Silakan login kembali.' });
+      }
+
+      const result = await submitVote({ member, candidate_id, ip_or_ua });
 
       if (!result.success) {
         return res.status(400).json(result);

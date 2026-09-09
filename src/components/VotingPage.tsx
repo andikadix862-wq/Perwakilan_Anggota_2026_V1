@@ -30,6 +30,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 
 interface VotingPageProps {
   member: Member;
+  token: string | null;
   onBack: () => void;
   onVoteSuccess: (result: SubmitVoteResponse) => void;
 }
@@ -117,10 +118,14 @@ export const VotingPage: React.FC<VotingPageProps> = ({
       alert('Silakan pilih 1 kandidat perwakilan terlebih dahulu.');
       return;
     }
+    if (!token) {
+      alert('Sesi tidak valid. Silakan login kembali.');
+      return;
+    }
 
     try {
       setSubmitting(true);
-      const res = await api.submitVote(member.email, [selectedCandidateId]);
+      const res = await api.submitVote(selectedCandidateId, token);
       if (res.success) {
         setIsModalOpen(false);
         // Lock page and navigate to thank-you/receipt page

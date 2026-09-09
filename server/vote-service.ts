@@ -10,6 +10,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { VoteRecord, Member, Candidate } from '../src/types';
+import { validateMemberToken, AuthenticatedMember } from './voting-auth';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
@@ -21,9 +22,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 // ===================== VOTE SUBMISSION =====================
 
 export interface VoteSubmissionParams {
-  email: string;        // From authenticated session
-  candidate_id: string; // Single candidate ID from frontend
-  ip_or_ua: string;     // IP/User-Agent for audit
+  member: AuthenticatedMember;  // Authenticated member from token
+  candidate_id: string;         // Single candidate ID from frontend
+  ip_or_ua: string;             // IP/User-Agent for audit
 }
 
 export interface VoteResult {
@@ -35,37 +36,30 @@ export interface VoteResult {
 /**
  * Submit vote with full validation
  * Flow:
- * 1. Get member from email (authenticated user)
- * 2. Get member's division from members table
- * 3. Get candidate details including division
- * 4. Verify candidate belongs to member's division
- * 5. Check if member already voted (fast path)
- * 6. Insert vote with database UNIQUE constraint as final protection
- * 7. Update member status_memilih
+ * 1. Member is already authenticated (validated by middleware)
+ * 2. Get candidate details including division
+ * 3. Verify candidate belongs to member's division
+ * 4. Check if member already voted (fast path)
+ * 5. Insert vote with database UNIQUE constraint as final protection
+ * 6. Update member status_memilih
  */
 export async function submitVote(params: VoteSubmissionParams): Promise<VoteResult> {
   try {
-    const { email, candidate_id, ip_or_ua } = params;
-    const cleanEmail = email.trim().toLowerCase();
+    const { member, candidate_id, ip_or_ua } = params;
 
-    // 1. GET MEMBER (backend lookup, not frontend trust)
-    const member = await getMemberByEmail(cleanEmail);
-    if (!member) {
-      return { success: false, message: 'Anggota tidak ditemukan atau tidak terdaftar.' };
-    }
-
-    // 2. VALIDATE MEMBER HAS DIVISION
+    // 1. MEMBER ALREADY AUTHENTICATED (no need to lookup)
+    // Validate member has division
     if (!member.bagian_id) {
       return { success: false, message: 'Anggota tidak terdaftar di divisi manapun.' };
     }
 
-    // 3. GET CANDIDATE DETAILS
+    // 2. GET CANDIDATE DETAILS
     const candidate = await getCandidateById(candidate_id);
     if (!candidate) {
       return { success: false, message: 'Kandidat tidak ditemukan.' };
     }
 
-    // 4. CRITICAL: DIVISION VALIDATION (backend enforced)
+    // 3. CRITICAL: DIVISION VALIDATION (backend enforced)
     if (candidate.bagian_id !== member.bagian_id) {
       return {
         success: false,
@@ -73,17 +67,17 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       };
     }
 
-    // 5. FAST PATH: Check if already voted (avoids race condition in most cases)
-    const existingVote = await getVoteByMember(cleanEmail);
+    // 4. FAST PATH: Check if already voted (avoids race condition in most cases)
+    const existingVote = await getVoteByMember(member.email);
     if (existingVote) {
       return { success: false, message: 'Anda sudah melakukan voting sebelumnya.' };
     }
 
-    // 6. CREATE VOTE RECORD (backend determines division)
+    // 5. CREATE VOTE RECORD (backend determines division)
     const vote_id = `VOTE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const voteData = {
       vote_id,
-      member_email: cleanEmail,
+      member_email: member.email,
       candidate_id,              // SINGLE candidate_id
       division_id: member.bagian_id, // BACKEND DETERMINES DIVISION
       user_agent: ip_or_ua,
@@ -91,7 +85,7 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       created_at: new Date().toISOString()
     };
 
-    // 7. INSERT WITH DATABASE UNIQUE CONSTRAINT (final race condition protection)
+    // 6. INSERT WITH DATABASE UNIQUE CONSTRAINT (final race condition protection)
     const { error } = await supabase.from('votes').insert(voteData);
     if (error) {
       if (error.code === '23505') { // Unique violation on member_email
@@ -104,21 +98,21 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       throw error;
     }
 
-    // 8. UPDATE MEMBER STATUS (async, non-blocking)
+    // 7. UPDATE MEMBER STATUS (async, non-blocking)
     supabase.from('members')
       .update({ status_memilih: 'SUDAH_MEMILIH' })
-      .eq('email', cleanEmail)
+      .eq('email', member.email)
       .then(({ error: updateError }) => {
         if (updateError) console.error('[VoteService] Status update failed:', updateError);
       });
 
-    // 9. EMIT REALTIME EVENT (fire-and-forget)
+    // 8. EMIT REALTIME EVENT (fire-and-forget) - NO member_email in payload
     try {
       const channel = supabase.channel('votes');
       channel.send({
         type: 'broadcast',
         event: 'vote_submitted',
-        payload: { vote_id, member_email: cleanEmail, division_id: member.bagian_id }
+        payload: { vote_id, division_id: member.bagian_id }  // SECURE: no member_email
       });
       channel.unsubscribe();
     } catch (realtimeErr) {
