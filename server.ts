@@ -116,7 +116,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   // AUTHENTICATION ROUTES (PRD SECTION 9 & 10)
   // Backend is the Single Source of Truth for Member Validation
   // -------------------------------------------------------------
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, role_intent } = req.body;
       if (!email || typeof email !== 'string') {
@@ -130,11 +130,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const cleanEmail = email.trim().toLowerCase();
       const ip_or_ua = (req.headers['user-agent'] as string) || req.ip || '127.0.0.1';
 
-      // 1. Check Master Data Anggota first
-      let member = getMemberByEmail(cleanEmail);
+      // 1. Check Master Data Anggota from RELATIONAL database
+      let member = await getMemberByEmailRelational(cleanEmail);
 
       // 2. Check Admin Master Data
-      const admins = getAdmins();
+      const admins = await getAllAdmins();
       const adminMatch = admins.find(a => a.email.toLowerCase() === cleanEmail);
 
       // If user is Admin (either explicitly requested or email is an admin-only account)
@@ -194,7 +194,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
       // Sync division stats and member vote status with DB votes
       syncDivisionStats();
-      const updatedMember = getMemberByEmail(cleanEmail);
+      const updatedMember = await getMemberByEmailRelational(cleanEmail);
       if (updatedMember) {
         member = updatedMember;
       }
@@ -233,7 +233,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Dedicated Admin Login Endpoint (Strictly Enforces ADMIN / SUPER_ADMIN role)
-  app.post('/api/auth/admin-login', (req, res) => {
+  app.post('/api/auth/admin-login', async (req, res) => {
     try {
       const { email } = req.body;
       if (!email || typeof email !== 'string') {
@@ -247,7 +247,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const cleanEmail = email.trim().toLowerCase();
       const ip_or_ua = (req.headers['user-agent'] as string) || req.ip || '127.0.0.1';
 
-      const admins = getAdmins();
+      const admins = await getAllAdmins();
       const adminMatch = admins.find(a => a.email.toLowerCase() === cleanEmail);
 
       if (
@@ -257,7 +257,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
           (adminMatch.role as string) !== 'ADMIN')
       ) {
         // If email is an Anggota, inform clearly that member is not permitted in Admin Portal
-        const member = getMemberByEmail(cleanEmail);
+        const member = await getMemberByEmailRelational(cleanEmail);
         if (member) {
           addAuditLog({
             user_email: cleanEmail,
@@ -317,20 +317,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Current User Profile
-  app.get('/api/auth/me', (req, res) => {
+  app.get('/api/auth/me', async (req, res) => {
     const email = req.query.email as string;
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email tidak disertakan.' });
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const admin = getAdmins().find(a => a.email.toLowerCase() === cleanEmail);
+    const admins = await getAllAdmins();
+    const admin = admins.find(a => a.email.toLowerCase() === cleanEmail);
     if (admin) {
       return res.json({ success: true, type: 'admin', user: admin });
     }
 
     syncDivisionStats();
-    const member = getMemberByEmail(cleanEmail);
+    const member = await getMemberByEmailRelational(cleanEmail);
     if (member) {
       return res.json({ success: true, type: 'member', user: member });
     }
@@ -393,27 +394,43 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     }
   });
 
-  // Get Candidates for Member (STRICT: ONLY candidates from member's division)
-  app.get('/api/voter/candidates', (req, res) => {
+  app.get('/api/voter/candidates', async (req, res) => {
     const email = req.query.email as string;
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email diperlukan.' });
     }
 
-    const member = getMemberByEmail(email);
+    // Use relational lookup instead of in-memory dbState
+    const member = await getMemberByEmailRelational(email);
     if (!member) {
       return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
     }
 
-    // STRICT: Filter strictly by voter's division
-    const candidates = getCandidates(member.bagian_id)
-      .filter(c => c.status_kandidat === 'AKTIF')
-      .sort((a, b) => a.nomor_urut - b.nomor_urut);
+    // Get candidates from relational database
+    const candidates = await getCandidatesByDivision(member.bagian_id);
+    const activeCandidates = candidates.filter(c => c.status_kandidat === 'AKTIF');
 
-    const db = getDatabase();
-    const validVotesInDiv = (db.votes || []).filter(v => v.bagian_id === member.bagian_id && v.status === 'VALID');
-    const totalSuaraDivisi = validVotesInDiv.length;
-    const maxVotesInDiv = candidates.length > 0 ? Math.max(...candidates.map(c => c.total_suara || 0), 0) : 0;
+    // Get vote counts from votes table
+    const { data: votes } = await supabase
+      .from('votes')
+      .select('*')
+      .eq('division_id', member.bagian_id)
+      .eq('status', 'VALID');
+
+    const voteCounts: Record<string, number> = {};
+    votes?.forEach(v => {
+      voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
+    });
+
+    const enrichedCandidates = activeCandidates.map(c => ({
+      ...c,
+      total_suara: voteCounts[c.kandidat_id] || 0
+    }));
+
+    const totalSuaraDivisi = votes?.length || 0;
+    const maxVotesInDiv = enrichedCandidates.length > 0
+      ? Math.max(...enrichedCandidates.map(c => c.total_suara || 0), 0)
+      : 0;
 
     res.json({
       success: true,
@@ -421,7 +438,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       nama_bagian: member.nama_bagian,
       total_suara_divisi: totalSuaraDivisi,
       suara_tertinggi: maxVotesInDiv,
-      candidates
+      candidates: enrichedCandidates
     });
   });
 
@@ -922,14 +939,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Toggle Hak Pilih
-  app.post('/api/admin/members/toggle-hak-pilih', (req, res) => {
+  app.post('/api/admin/members/toggle-hak-pilih', async (req, res) => {
     const { email, hak_pilih, adminEmail } = req.body;
-    const member = getMemberByEmail(email);
+    const member = await getMemberByEmailRelational(email);
     if (!member) {
       return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
     }
 
     member.hak_pilih = Boolean(hak_pilih);
+    await upsertMember(member);
     addAuditLog({
       user_email: adminEmail || 'admin',
       user_role: 'SUPER_ADMIN',
