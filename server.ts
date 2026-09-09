@@ -401,46 +401,48 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       return res.status(400).json({ success: false, message: 'Email diperlukan.' });
     }
 
-    // Use relational lookup instead of in-memory dbState
-    const member = await getMemberByEmailRelational(email);
-    if (!member) {
-      return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
+    try {
+      // Use relational lookup
+      const member = await getMemberByEmailRelational(email);
+      if (!member) {
+        return res.status(404).json({ success: false, message: 'Anggota tidak ditemukan.' });
+      }
+
+      // Get candidates from relational database
+      const candidates = await getCandidatesByDivision(member.bagian_id);
+      const activeCandidates = candidates.filter((c: any) => c.status_kandidat === 'AKTIF');
+
+      // Get vote counts from votes table using database service
+      const votes = await getAllVotes();
+      const divisionVotes = votes.filter((v: any) => v.division_id === member.bagian_id && v.status === 'VALID');
+
+      const voteCounts: Record<string, number> = {};
+      divisionVotes.forEach((v: any) => {
+        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
+      });
+
+      const enrichedCandidates = activeCandidates.map((c: any) => ({
+        ...c,
+        total_suara: voteCounts[c.kandidat_id] || 0
+      }));
+
+      const totalSuaraDivisi = divisionVotes.length;
+      const maxVotesInDiv = enrichedCandidates.length > 0
+        ? Math.max(...enrichedCandidates.map((c: any) => c.total_suara || 0), 0)
+        : 0;
+
+      res.json({
+        success: true,
+        bagian_id: member.bagian_id,
+        nama_bagian: member.nama_bagian,
+        total_suara_divisi: totalSuaraDivisi,
+        suara_tertinggi: maxVotesInDiv,
+        candidates: enrichedCandidates
+      });
+    } catch (err: any) {
+      console.error('Get candidates error:', err);
+      res.status(500).json({ success: false, message: 'Gagal memuat data kandidat.' });
     }
-
-    // Get candidates from relational database
-    const candidates = await getCandidatesByDivision(member.bagian_id);
-    const activeCandidates = candidates.filter(c => c.status_kandidat === 'AKTIF');
-
-    // Get vote counts from votes table
-    const { data: votes } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('division_id', member.bagian_id)
-      .eq('status', 'VALID');
-
-    const voteCounts: Record<string, number> = {};
-    votes?.forEach(v => {
-      voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
-    });
-
-    const enrichedCandidates = activeCandidates.map(c => ({
-      ...c,
-      total_suara: voteCounts[c.kandidat_id] || 0
-    }));
-
-    const totalSuaraDivisi = votes?.length || 0;
-    const maxVotesInDiv = enrichedCandidates.length > 0
-      ? Math.max(...enrichedCandidates.map(c => c.total_suara || 0), 0)
-      : 0;
-
-    res.json({
-      success: true,
-      bagian_id: member.bagian_id,
-      nama_bagian: member.nama_bagian,
-      total_suara_divisi: totalSuaraDivisi,
-      suara_tertinggi: maxVotesInDiv,
-      candidates: enrichedCandidates
-    });
   });
 
   // Submit Ballot / Vote (PRD Section 14, 15, 16, 17)
