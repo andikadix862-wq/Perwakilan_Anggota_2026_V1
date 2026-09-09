@@ -568,23 +568,40 @@ export function saveDatabaseToFile(): void {
 }
 
 /**
- * Initialize database from Firestore on cold start (async).
- * Must be called once before handling requests on Vercel.
+ * Initialize database from relational tables OR fallback to Supabase JSON blob.
+ * This ensures production always uses relational tables as primary source.
  */
 export async function initializeDatabaseAsync(): Promise<void> {
   if (dbState) return; // already loaded in this instance
+
+  // Step 1: Try relational tables first (PRIMARY for production)
+  try {
+    const { initializeDatabaseFromRelational } = await import('./relational-init');
+    const relationalData = await initializeDatabaseFromRelational();
+    if (relationalData && relationalData.members.length > 0) {
+      dbState = relationalData;
+      reEvaluateAllMembersPension();
+      console.log(`[db] Loaded ${relationalData.members.length} members from relational tables.`);
+      return;
+    }
+  } catch (err) {
+    console.warn('[db] Relational load failed, falling back to system_state:', err);
+  }
+
+  // Step 2: Fallback to system_state JSON blob
   try {
     const firestoreData = await loadDbFromSupabase();
     if (firestoreData) {
       dbState = firestoreData as DatabaseState;
       reEvaluateAllMembersPension();
-      console.log('[db] Loaded from Supabase.');
+      console.log('[db] Loaded from Supabase system_state (fallback).');
       return;
     }
   } catch (err) {
-    console.warn('[db] Supabase load failed, falling back to seed:', err);
+    console.warn('[db] Supabase load failed:', err);
   }
-  // Fall back to local file or seed
+
+  // Step 3: Final fallback to local seed
   getDatabase();
 }
 
