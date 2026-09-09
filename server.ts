@@ -412,12 +412,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const candidates = await getCandidatesByDivision(member.bagian_id);
       const activeCandidates = candidates.filter((c: any) => c.status_kandidat === 'AKTIF');
 
-      // Get vote counts from votes table using database service
-      const votes = await getAllVotes();
-      const divisionVotes = votes.filter((v: any) => v.division_id === member.bagian_id && v.status === 'VALID');
+      // Get vote counts efficiently - only for this division
+      const { count: totalVotes } = await supabase
+        .from('votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('division_id', member.bagian_id)
+        .eq('status', 'VALID');
 
       const voteCounts: Record<string, number> = {};
-      divisionVotes.forEach((v: any) => {
+      // Get vote details for this division only
+      const { data: divisionVotes } = await supabase
+        .from('votes')
+        .select('candidate_id')
+        .eq('division_id', member.bagian_id)
+        .eq('status', 'VALID');
+
+      divisionVotes?.forEach((v: any) => {
         voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
       });
 
@@ -426,7 +436,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         total_suara: voteCounts[c.kandidat_id] || 0
       }));
 
-      const totalSuaraDivisi = divisionVotes.length;
+      const totalSuaraDivisi = totalVotes || 0;
       const maxVotesInDiv = enrichedCandidates.length > 0
         ? Math.max(...enrichedCandidates.map((c: any) => c.total_suara || 0), 0)
         : 0;
