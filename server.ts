@@ -909,8 +909,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     }
 
     try {
-      const added = 0;
-      const updated = 0;
+      let added = 0;
+      let updated = 0;
       const errors: string[] = [];
 
       for (let i = 0; i < members.length; i++) {
