@@ -58,10 +58,13 @@ export async function getAllCandidates(): Promise<Candidate[]> {
 }
 
 export async function getCandidatesByDivision(bagian_id?: string): Promise<Candidate[]> {
-  const { data, error } = await supabase.from('candidates').select('*');
+  let query = supabase.from('candidates').select('*');
+  if (bagian_id) {
+    query = query.eq('bagian_id', bagian_id);
+  }
+  const { data, error } = await query;
   if (error) throw error;
-  if (!bagian_id) return data as Candidate[];
-  return (data || []).filter((c: Candidate) => c.bagian_id === bagian_id) as Candidate[];
+  return (data || []) as Candidate[];
 }
 
 // ===================== DIVISIONS =====================
