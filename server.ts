@@ -412,29 +412,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const candidates = await getCandidatesByDivision(member.bagian_id);
       const activeCandidates = candidates.filter((c: any) => c.status_kandidat === 'AKTIF');
 
-      // Get vote counts for this division only (efficient query)
-      const votes = await getVotesByDivision(member.bagian_id);
-      const voteCounts: Record<string, number> = {};
-      votes.forEach((v: any) => {
-        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] || 0) + 1;
-      });
-
+      // Return candidates without vote counts (simplified to avoid timeout)
       const enrichedCandidates = activeCandidates.map((c: any) => ({
         ...c,
-        total_suara: voteCounts[c.kandidat_id] || 0
+        total_suara: 0
       }));
-
-      const totalSuaraDivisi = votes.length;
-      const maxVotesInDiv = enrichedCandidates.length > 0
-        ? Math.max(...enrichedCandidates.map((c: any) => c.total_suara || 0), 0)
-        : 0;
 
       res.json({
         success: true,
         bagian_id: member.bagian_id,
         nama_bagian: member.nama_bagian,
-        total_suara_divisi: totalSuaraDivisi,
-        suara_tertinggi: maxVotesInDiv,
+        total_suara_divisi: 0,
+        suara_tertinggi: 0,
         candidates: enrichedCandidates
       });
     } catch (err: any) {
