@@ -587,7 +587,16 @@ export async function initializeDatabaseAsync(): Promise<void> {
     const relationalData = await initializeDatabaseFromRelational();
     if (relationalData && relationalData.members.length > 0) {
       dbState = relationalData;
-      reEvaluateAllMembersPension();
+      // Generate fresh candidates from members
+      syncCandidatesWithMembers();
+      // Sync candidates to Supabase
+      try {
+        const { syncCandidatesToSupabase } = await import('./database-service');
+        await syncCandidatesToSupabase(dbState.candidates || []);
+        console.log(`[db] Generated and synced ${dbState.candidates?.length || 0} candidates to Supabase.`);
+      } catch (err) {
+        console.error('[db] Failed to sync candidates:', err);
+      }
       console.log(`[db] Loaded ${relationalData.members.length} members from relational tables.`);
       return;
     }

@@ -58,7 +58,8 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
   }
   
   const members = membersRes.data as Member[] || [];
-  const candidates = candidatesRes.data as Candidate[] || [];
+  // DO NOT load candidates from Supabase - generate fresh from members
+  const candidates = [] as Candidate[];
   const divisions = divisionsRes.data as Division[] || [];
   const admins = adminsRes.data as AdminUser[] || [];
   
@@ -86,9 +87,7 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
   if (members.length !== 436) {
     console.warn(`[RelationalInit] WARNING: Expected 436 members, got ${members.length}`);
   }
-  if (candidates.length !== 436) {
-    console.warn(`[RelationalInit] WARNING: Expected 436 candidates, got ${candidates.length}`);
-  }
+  // Note: candidates are generated fresh from members, not loaded from DB
   if (divisions.length !== 16) {
     console.warn(`[RelationalInit] WARNING: Expected 16 divisions, got ${divisions.length}`);
   }
