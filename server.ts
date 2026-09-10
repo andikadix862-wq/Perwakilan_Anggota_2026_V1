@@ -66,7 +66,7 @@ import {
   checkPegawai,
   saveDatabaseToFile,
 } from './server/db';
-import { deleteMember as deleteMemberRelational } from './server/database-service';
+import { deleteMember as deleteMemberRelational, upsertMember as upsertMemberRelational } from './server/database-service';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
 import { calculateQuota } from './server/quotaService';
@@ -901,16 +901,65 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     }
   });
 
-  // Upsert Members / Bulk Import (PRD Section 24)
-  app.post('/api/admin/members/upsert', (req, res) => {
+  // Upsert Members / Bulk Import (PRD Section 24) - Uses Supabase Relational DB
+  app.post('/api/admin/members/upsert', async (req, res) => {
     const { members, adminEmail } = req.body;
     if (!members || !Array.isArray(members)) {
       return res.status(400).json({ success: false, message: 'Data anggota tidak valid (harus array).' });
     }
 
-    const result = upsertMembers(members, adminEmail || 'admin');
-    saveDatabaseToFile();
-    res.json({ success: true, result });
+    try {
+      const added = 0;
+      const updated = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < members.length; i++) {
+        const item = members[i];
+        const rawNomorAnggota = (item.nomor_anggota || '').trim();
+        const rawNama = (item.nama || '').trim();
+        const rawEmail = (item.email || '').trim().toLowerCase();
+        const rawBagian = (item.bagian_id || '').trim();
+        const rawNik = (item.nik || '').trim().toUpperCase();
+
+        if (!rawEmail || !rawNomorAnggota || !rawNama || !rawBagian) {
+          errors.push(`Baris ${i + 1}: Data tidak lengkap (Nomor Anggota, Nama, Email, dan Bagian wajib diisi).`);
+          continue;
+        }
+
+        // Check if member exists
+        const existing = await getMemberByEmailRelational(rawEmail);
+        
+        // Build member object
+        const member = {
+          email: rawEmail,
+          nomor_anggota: rawNomorAnggota.toUpperCase(),
+          nik: rawNik,
+          nama: rawNama,
+          bagian_id: rawBagian,
+          nama_bagian: item.nama_bagian || rawBagian,
+          status: item.status || 'AKTIF',
+          hak_pilih: item.hak_pilih !== undefined ? item.hak_pilih : true,
+          status_memilih: item.status_memilih || 'BELUM_MEMILIH',
+          tanggal_lahir: item.tanggal_lahir || null,
+          tanggal_pensiun: item.tanggal_pensiun || '2036-01-01',
+          jabatan: item.jabatan || 'Anggota',
+          telepon: item.telepon || '',
+          created_at: existing ? undefined : new Date().toISOString()
+        };
+
+        await upsertMemberRelational(member);
+        if (existing) {
+          updated++;
+        } else {
+          added++;
+        }
+      }
+
+      res.json({ success: true, result: { added, updated, errors, newDivisionsCreated: [] } });
+    } catch (error: any) {
+      console.error('Gagal upsert members:', error);
+      res.status(500).json({ success: false, message: error.message || 'Gagal menyimpan data anggota.' });
+    }
   });
 
   // Re-evaluate Pension & Qualification for All Members
