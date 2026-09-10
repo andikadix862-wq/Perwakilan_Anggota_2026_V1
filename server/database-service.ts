@@ -109,6 +109,14 @@ export async function getCandidatesByDivision(bagian_id?: string): Promise<Candi
   return (data || []) as Candidate[];
 }
 
+// Sync candidates from dbState to Supabase (after re-evaluate)
+export async function syncCandidatesToSupabase(candidates: Candidate[]): Promise<void> {
+  for (const c of candidates) {
+    const { error } = await supabase.from('candidates').upsert(c, { onConflict: 'kandidat_id' });
+    if (error) throw error;
+  }
+}
+
 // ===================== DIVISIONS =====================
 
 export async function getAllDivisions(): Promise<Division[]> {

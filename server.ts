@@ -65,8 +65,9 @@ import {
   verifyAdminPassword,
   checkPegawai,
   saveDatabaseToFile,
+  getDatabase,
 } from './server/db';
-import { deleteMember as deleteMemberRelational, upsertMember as upsertMemberRelational } from './server/database-service';
+import { deleteMember as deleteMemberRelational, upsertMember as upsertMemberRelational, syncCandidatesToSupabase } from './server/database-service';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
 import { calculateQuota } from './server/quotaService';
@@ -963,8 +964,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Re-evaluate Pension & Qualification for All Members
-  app.post('/api/admin/members/re-evaluate', (req, res) => {
+  app.post('/api/admin/members/re-evaluate', async (req, res) => {
     const stats = reEvaluateAllMembersPension();
+    // Sync candidates to Supabase after re-evaluation
+    try {
+      const db = getDatabase();
+      await syncCandidatesToSupabase(db.candidates || []);
+    } catch (err) {
+      console.error('Failed to sync candidates:', err);
+    }
     res.json({
       success: true,
       total: stats.total,
