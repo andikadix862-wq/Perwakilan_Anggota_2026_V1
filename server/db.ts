@@ -1384,10 +1384,14 @@ export function getCandidates(bagian_id?: string): Candidate[] {
   // Sync candidates to Supabase after generating fresh data
   try {
     const candidates = db.candidates || [];
-    candidates.forEach(c => {
-      supabase.from('candidates').upsert(c, { onConflict: 'kandidat_id' }).catch(err => {
-        console.error(`[getCandidates] Error syncing ${c.kandidat_id}:`, err);
-      });
+    console.log(`[getCandidates] Syncing ${candidates.length} candidates to Supabase...`);
+    const syncPromises = candidates.map(c =>
+      supabase.from('candidates').upsert(c, { onConflict: 'kandidat_id' })
+        .then(() => console.log(`[getCandidates] Synced ${c.kandidat_id}: ${c.nama}`))
+        .catch(err => console.error(`[getCandidates] Error syncing ${c.kandidat_id}:`, err.message))
+    );
+    Promise.all(syncPromises).then(() => {
+      console.log('[getCandidates] All candidates synced to Supabase');
     });
   } catch (err) {
     console.error('[getCandidates] Failed to sync candidates:', err);
