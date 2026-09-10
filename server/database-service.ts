@@ -44,9 +44,49 @@ export async function upsertMember(member: Member): Promise<void> {
   if (error) throw error;
 }
 
-export async function deleteMember(email: string): Promise<void> {
-  const { error } = await supabase.from('members').delete().eq('email', email.toLowerCase());
-  if (error) throw error;
+export async function deleteMember(email: string): Promise<{ success: boolean; message?: string; memberName?: string }> {
+  const memberEmail = email.toLowerCase();
+
+  // Step 1: Get member data first (for audit log)
+  const { data: member, error: memberError } = await supabase
+    .from('members')
+    .select('email, nama, nomor_anggota')
+    .eq('email', memberEmail)
+    .single();
+
+  if (!member) {
+    return { success: false, message: 'Anggota tidak ditemukan.' };
+  }
+
+  // Step 2: Delete votes first (FK constraint)
+  const { error: voteError } = await supabase
+    .from('votes')
+    .delete()
+    .eq('member_email', memberEmail);
+  if (voteError) {
+    console.error('Error deleting votes:', voteError);
+  }
+
+  // Step 3: Delete candidates (by nomor_anggota)
+  const { error: candidateError } = await supabase
+    .from('candidates')
+    .delete()
+    .eq('nomor_anggota', member.nomor_anggota);
+  if (candidateError) {
+    console.error('Error deleting candidates:', candidateError);
+  }
+
+  // Step 4: Delete member
+  const { error: deleteError } = await supabase
+    .from('members')
+    .delete()
+    .eq('email', memberEmail);
+
+  if (deleteError) {
+    throw new Error(`Gagal menghapus anggota: ${deleteError.message}`);
+  }
+
+  return { success: true, message: `Anggota ${member.nama} berhasil dihapus.` };
 }
 
 // ===================== CANDIDATES =====================

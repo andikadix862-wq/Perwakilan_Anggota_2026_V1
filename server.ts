@@ -65,8 +65,8 @@ import {
   verifyAdminPassword,
   checkPegawai,
   saveDatabaseToFile,
-  deleteMember
 } from './server/db';
+import { deleteMember as deleteMemberRelational } from './server/database-service';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
 import { calculateQuota } from './server/quotaService';
@@ -948,11 +948,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Delete Member (HRIS / Penghapusan Anggota)
-  app.delete('/api/admin/members/:email', (req, res) => {
+  app.delete('/api/admin/members/:email', async (req, res) => {
     try {
       const { email } = req.params;
       const adminEmail = req.body.adminEmail || 'admin';
-      const result = deleteMember(email, adminEmail);
+      const result = await deleteMemberRelational(email);
       if (!result.success) {
         return res.status(404).json({ success: false, message: result.message });
       }
