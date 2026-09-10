@@ -317,7 +317,9 @@ export const AdminReportsExport: React.FC = () => {
                   <th className="py-2.5 px-3 border-r border-gray-300 w-12 text-center">No</th>
                   <th className="py-2.5 px-3 border-r border-gray-300">Bagian / Divisi</th>
                   <th className="py-2.5 px-3 border-r border-gray-300 text-center w-28">Kuota Kursi</th>
-                  <th className="py-2.5 px-3">Nama Perwakilan Terpilih</th>
+                  <th className="py-2.5 px-3 border-r border-gray-300">Nama Perwakilan Terpilih</th>
+                  <th className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Jumlah Suara</th>
+                  <th className="py-2.5 px-3 text-center w-20">Persentase</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 text-gray-800">
@@ -341,21 +343,36 @@ export const AdminReportsExport: React.FC = () => {
                           {elected.length > 0 ? `(${elected.length} terisi)` : '(0 terisi)'}
                         </div>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3 border-r border-gray-200">
                         {elected.length === 0 ? (
                           <span className="text-gray-400 italic">Belum ada calon terpilih</span>
                         ) : (
-                          <div className="space-y-1">
-                            {elected.map((c, cIdx) => (
-                              <div key={c.kandidat_id} className="flex items-center gap-2">
-                                <span className="font-extrabold text-gray-900">
-                                  {cIdx + 1}. {c.nama}
-                                </span>
-                                <span className="text-gray-500 font-mono text-[10px]">
-                                  (No. Anggota: {c.nomor_anggota} • {c.total_suara} Suara Sah)
-                                </span>
-                              </div>
-                            ))}
+                          <div className="space-y-1.5">
+                            {elected.map((c, cIdx) => {
+                              const percent = divRes.total_suara_masuk > 0
+                                ? Math.round((c.total_suara / divRes.total_suara_masuk) * 100)
+                                : 0;
+                              return (
+                                <div key={c.kandidat_id} className="flex items-center justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-extrabold text-gray-900 text-[11px]">
+                                      {cIdx + 1}. {c.nama}
+                                    </span>
+                                    <div className="text-[9px] text-gray-500 font-mono truncate">
+                                      No. Anggota: {c.nomor_anggota}
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="font-black text-emerald-700 text-sm font-mono">
+                                      {c.total_suara}
+                                    </div>
+                                    <div className="text-[9px] text-gray-400 font-mono">
+                                      suara ({percent}%)
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </td>
