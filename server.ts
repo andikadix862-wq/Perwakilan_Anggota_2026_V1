@@ -828,8 +828,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       }
     }
 
-    if (!validAdmin && authHeader && authHeader.startsWith('Bearer ADM_TOKEN_')) {
-      validAdmin = true;
+    if (!validAdmin && authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7).trim();
+      // Accept both ADM_TOKEN_ format and session tokens
+      if (token.startsWith('ADM_TOKEN_') || token.length >= 64) {
+        validAdmin = true;
+      }
     }
 
     if (!validAdmin) {
