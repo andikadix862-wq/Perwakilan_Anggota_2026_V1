@@ -102,6 +102,8 @@ export async function getCandidatesByDivision(bagian_id?: string): Promise<Candi
   if (bagian_id) {
     query = query.eq('bagian_id', bagian_id);
   }
+  // FILTER: Only eligible candidates (memenuhi_syarat = true)
+  query = query.eq('memenuhi_syarat', true);
   const { data, error } = await query;
   if (error) throw error;
   return (data || []) as Candidate[];
