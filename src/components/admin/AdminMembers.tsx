@@ -724,45 +724,43 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
                           </button>
 
                           {/* Hak Dipilih Badge */}
-                          {isPegawaiUser ? (
-                            <span
-                              className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-[9.5px] font-bold uppercase tracking-wider bg-blue-100 text-blue-950 border border-blue-300 w-full shadow-2xs"
-                              title={m.alasan_hak_dipilih || "Terdaftar sebagai Pegawai/Karyawan. Sesuai ketentuan AD/ART, Pegawai/Karyawan HANYA memiliki Hak Memilih dan tidak memiliki Hak Dipilih (Hanya Pemilih)."}
-                            >
-                              <ShieldAlert className="w-3.5 h-3.5 text-blue-700 shrink-0" />
-                              <span>Pegawai - Hanya Pemilih</span>
-                            </span>
-                          ) : m.hak_pilih ? (
-                            isPengurusOrBpk.isPengurusBPK ? (
-                              <span
-                                className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-[9.5px] font-bold uppercase tracking-wider bg-purple-100 text-purple-950 border border-purple-300 w-full shadow-2xs"
-                                title={m.alasan_hak_dipilih || `Menjabat sebagai ${isPengurusOrBpk.label}. Sesuai ketentuan AD/ART, Pengurus dan BPK HANYA memiliki Hak Memilih dan tidak memiliki Hak Dipilih (Hanya Pemilih).`}
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                                <span>Pengurus / BPK - Hanya Pemilih</span>
-                              </span>
-                            ) : isWarning ? (
-                              <span
-                                className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 w-full"
-                                title={m.alasan_hak_dipilih || pension.alasan_hak_dipilih || "Tidak berhak dicalonkan karena sisa masa pensiun < 4 tahun (usia 51+ thn). Berstatus Hanya Pemilih."}
-                              >
-                                <AlertTriangle className="w-3 h-3 text-amber-700 shrink-0" />
-                                <span>Sisa Pensiun &lt; 4 Thn (Hanya Pemilih)</span>
-                              </span>
-                            ) : (
-                              <span
-                                className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200 w-full"
-                                title="Memenuhi syarat dicalonkan sebagai calon perwakilan (sisa masa pensiun ≥ 4 tahun)."
-                              >
-                                <CheckCircle2 className="w-3 h-3 text-blue-700 shrink-0" />
-                                <span>HAK DIPILIH: YA (Layak Dicalonkan)</span>
-                              </span>
-                            )
-                          ) : (
-                            <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-medium uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200 w-full">
-                              <span>Hak Dipilih: NONAKTIF</span>
-                            </span>
-                          )}
+                                                    {isPegawaiUser ? (
+                                                      <span
+                                                        className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-[9.5px] font-bold uppercase tracking-wider bg-blue-100 text-blue-950 border border-blue-300 w-full shadow-2xs"
+                                                        title={m.alasan_hak_dipilih || "Terdaftar sebagai Pegawai/Karyawan. Sesuai ketentuan AD/ART, Pegawai/Karyawan HANYA memiliki Hak Memilih dan tidak memiliki Hak Dipilih (Hanya Pemilih)."}
+                                                      >
+                                                        <ShieldAlert className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                                                        <span>Pegawai - Hanya Pemilih</span>
+                                                      </span>
+                                                    ) : isPengurusOrBpk.isPengurusBPK ? (
+                                                      <span
+                                                        className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-[9.5px] font-bold uppercase tracking-wider bg-purple-100 text-purple-950 border border-purple-300 w-full shadow-2xs"
+                                                        title={m.alasan_hak_dipilih || `Menjabat sebagai ${isPengurusOrBpk.label}. Sesuai ketentuan AD/ART, Pengurus dan BPK HANYA memiliki Hak Memilih dan tidak memiliki Hak Dipilih (Hanya Pemilih).`}
+                                                      >
+                                                        <ShieldAlert className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                                                        <span>Pengurus / BPK - Hanya Pemilih</span>
+                                                      </span>
+                                                    ) : isWarning ? (
+                                                      <span
+                                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 w-full"
+                                                        title={m.alasan_hak_dipilih || pension.alasan_hak_dipilih || "Tidak berhak dicalonkan karena sisa masa pensiun < 4 tahun (usia 51+ thn). Berstatus Hanya Pemilih."}
+                                                      >
+                                                        <AlertTriangle className="w-3 h-3 text-amber-700 shrink-0" />
+                                                        <span>Sisa Pensiun < 4 Thn (Hanya Pemilih)</span>
+                                                      </span>
+                                                    ) : m.hak_pilih ? (
+                                                      <span
+                                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200 w-full"
+                                                        title="Memenuhi syarat dicalonkan sebagai calon perwakilan (sisa masa pensiun ≥ 4 tahun)."
+                                                      >
+                                                        <CheckCircle2 className="w-3 h-3 text-blue-700 shrink-0" />
+                                                        <span>HAK DIPILIH: YA (Layak Dicalonkan)</span>
+                                                      </span>
+                                                    ) : (
+                                                      <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-medium uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200 w-full">
+                                                        <span>Hak Dipilih: NONAKTIF</span>
+                                                      </span>
+                                                    )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">
