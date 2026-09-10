@@ -15,6 +15,12 @@ import {
 } from '../src/types';
 import { calculateQuota } from './quotaService';
 import { loadDbFromSupabase, saveDbToSupabase } from './supabase-adapter';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase client for direct relational table operations
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Use /tmp on Vercel (writable), fallback to local path in dev
 const IS_VERCEL = !!process.env.VERCEL || process.env.NODE_ENV === 'production';
@@ -1375,6 +1381,17 @@ export function deleteDivision(
 export function getCandidates(bagian_id?: string): Candidate[] {
   const db = getDatabase();
   syncCandidatesWithMembers();
+  // Sync candidates to Supabase after generating fresh data
+  try {
+    const candidates = db.candidates || [];
+    candidates.forEach(c => {
+      supabase.from('candidates').upsert(c, { onConflict: 'kandidat_id' }).catch(err => {
+        console.error(`[getCandidates] Error syncing ${c.kandidat_id}:`, err);
+      });
+    });
+  } catch (err) {
+    console.error('[getCandidates] Failed to sync candidates:', err);
+  }
   let list = db.candidates;
   if (bagian_id && bagian_id !== 'ALL') {
     list = list.filter(c => c.bagian_id === bagian_id);
