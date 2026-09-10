@@ -8,7 +8,7 @@ import type { Member, Division, Candidate, ElectionConfig, VoteRecord, AdminUser
 
 // Use server-side environment variables (no VITE_ prefix for service role key)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Diagnostic
 if (!SUPABASE_URL) {
