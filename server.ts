@@ -969,9 +969,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     // Sync candidates to Supabase after re-evaluation
     try {
       const db = getDatabase();
+      console.log(`[re-evaluate] Syncing ${db.candidates?.length || 0} candidates to Supabase`);
       await syncCandidatesToSupabase(db.candidates || []);
+      console.log('[re-evaluate] Candidates synced to Supabase successfully');
     } catch (err) {
-      console.error('Failed to sync candidates:', err);
+      console.error('[re-evaluate] Failed to sync candidates:', err);
     }
     res.json({
       success: true,
