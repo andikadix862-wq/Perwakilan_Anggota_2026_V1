@@ -111,10 +111,15 @@ export async function getCandidatesByDivision(bagian_id?: string): Promise<Candi
 
 // Sync candidates from dbState to Supabase (after re-evaluate)
 export async function syncCandidatesToSupabase(candidates: Candidate[]): Promise<void> {
+  console.log(`[syncCandidates] Syncing ${candidates.length} candidates to Supabase`);
   for (const c of candidates) {
     const { error } = await supabase.from('candidates').upsert(c, { onConflict: 'kandidat_id' });
-    if (error) throw error;
+    if (error) {
+      console.error(`[syncCandidates] Error for ${c.kandidat_id}:`, error.message);
+      throw error;
+    }
   }
+  console.log('[syncCandidates] Sync completed successfully');
 }
 
 // ===================== DIVISIONS =====================
