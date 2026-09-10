@@ -412,19 +412,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const candidates = await getCandidatesByDivision(member.bagian_id);
       const activeCandidates = candidates.filter((c: any) => c.status_kandidat === 'AKTIF');
 
-      // Return candidates without vote counts (simplified to avoid timeout)
-      const enrichedCandidates = activeCandidates.map((c: any) => ({
-        ...c,
-        total_suara: 0
-      }));
-
       res.json({
         success: true,
         bagian_id: member.bagian_id,
         nama_bagian: member.nama_bagian,
         total_suara_divisi: 0,
         suara_tertinggi: 0,
-        candidates: enrichedCandidates
+        candidates: activeCandidates
       });
     } catch (err: any) {
       console.error('Get candidates error:', err);
