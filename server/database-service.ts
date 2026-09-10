@@ -98,15 +98,20 @@ export async function getAllCandidates(): Promise<Candidate[]> {
 }
 
 export async function getCandidatesByDivision(bagian_id?: string): Promise<Candidate[]> {
-  let query = supabase.from('candidates').select('*');
+  // Import db.ts to get fresh candidates from members
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  const db = getDatabase();
+  syncCandidatesWithMembers();
+  
+  // Filter by division and eligible status from fresh data
+  let candidates = db.candidates || [];
   if (bagian_id) {
-    query = query.eq('bagian_id', bagian_id);
+    candidates = candidates.filter(c => c.bagian_id === bagian_id);
   }
   // FILTER: Only eligible candidates (memenuhi_syarat = true)
-  query = query.eq('memenuhi_syarat', true);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []) as Candidate[];
+  candidates = candidates.filter(c => c.memenuhi_syarat === true);
+  
+  return candidates as Candidate[];
 }
 
 // Sync candidates from dbState to Supabase (after re-evaluate)
