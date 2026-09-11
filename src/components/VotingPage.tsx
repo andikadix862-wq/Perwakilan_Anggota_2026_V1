@@ -44,7 +44,7 @@ export const VotingPage: React.FC<VotingPageProps> = ({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   // Sorting: 'suara_terbanyak' | 'nomor_urut' | 'nama'
-  const [sortOption, setSortOption] = useState<'suara_terbanyak' | 'nomor_urut' | 'nama'>('nomor_urut');
+  const [sortOption, setSortOption] = useState<'suara_terbanyak' | 'nomor_urut' | 'nama'>('nama');
   // Filter tab: 'all' | 'ada_suara' | 'eligible' | 'ineligible'
   const [filterTab, setFilterTab] = useState<'all' | 'ada_suara' | 'eligible' | 'ineligible'>('all');
   const [divisionTotalVotes, setDivisionTotalVotes] = useState<number>(0);
