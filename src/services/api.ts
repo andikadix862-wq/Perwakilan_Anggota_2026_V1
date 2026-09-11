@@ -380,7 +380,7 @@ export const api = {
     const res = await fetch('/api/admin/config', {
       method: 'PUT',
       headers: getAdminRequestHeaders(adminEmail),
-      body: JSON.stringify(newConfig)
+      body: JSON.stringify({ newConfig, adminEmail })
     });
     return handleJsonResponse(res);
   },
