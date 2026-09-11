@@ -378,7 +378,7 @@ export const api = {
 
   async updateConfig(newConfig: Partial<ElectionConfig>, adminEmail?: string): Promise<ElectionConfig> {
     const res = await fetch('/api/admin/config', {
-      method: 'POST',
+      method: 'PUT',
       headers: getAdminRequestHeaders(adminEmail),
       body: JSON.stringify(newConfig)
     });
