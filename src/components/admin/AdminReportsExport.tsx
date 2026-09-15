@@ -132,6 +132,12 @@ export const AdminReportsExport: React.FC = () => {
     const exportData: any[] = [];
 
     results.forEach(d => {
+      // Calculate voters and non-voters for this division
+      const divMembers = members.filter(m => m.bagian_id === d.bagian_id);
+      const totalDivMembers = divMembers.length;
+      const votedDivMembers = divMembers.filter(m => m.status_memilih === 'SUDAH_MEMILIH').length;
+      const notVotedDivMembers = totalDivMembers - votedDivMembers;
+
       d.candidates.forEach(c => {
         const isActuallyElected = (c.status_kursi === 'TERPILIH' || c.status_terpilih === 'TERPILIH') && (c.total_suara || 0) > 0;
         const statusKursi = isActuallyElected ? 'TERPILIH' : 'TIDAK_TERPILIH';
@@ -141,6 +147,8 @@ export const AdminReportsExport: React.FC = () => {
           'Nama Bagian / Divisi': d.nama_bagian,
           'Kuota Kursi': d.kuota_kursi,
           'Total Anggota': d.total_anggota,
+          'Jumlah Pemilih': votedDivMembers,
+          'Jumlah Tidak Memilih': notVotedDivMembers,
           'Partisipasi Pemilih (%)': `${d.partisipasi_persen}%`,
           'No. Urut': c.nomor_urut,
           'Nama Kandidat': c.nama,
@@ -163,6 +171,12 @@ export const AdminReportsExport: React.FC = () => {
     let rowNum = 1;
 
     results.forEach(d => {
+      // Calculate voters and non-voters for this division
+      const divMembers = members.filter(m => m.bagian_id === d.bagian_id);
+      const totalDivMembers = divMembers.length;
+      const votedDivMembers = divMembers.filter(m => m.status_memilih === 'SUDAH_MEMILIH').length;
+      const notVotedDivMembers = totalDivMembers - votedDivMembers;
+
       const elected = d.candidates.filter(
         c => (c.status_kursi === 'TERPILIH' || c.status_terpilih === 'TERPILIH') && (c.total_suara || 0) > 0
       );
@@ -171,9 +185,10 @@ export const AdminReportsExport: React.FC = () => {
         exportData.push({
           'No': rowNum++,
           'Bagian / Divisi': d.nama_bagian,
-          'Kuota Kursi': d.kuota_kursi,
-          'Status Kelulusan Bagian': 'Belum Ada Calon Terpilih',
-          'No. Urut': '-',
+          'Kuota / Kursi': `${d.kuota_kursi} Kursi (${totalDivMembers} Anggota)`,
+          'Jumlah Pemilih': votedDivMembers,
+          'Jumlah Tidak Memilih': notVotedDivMembers,
+          'Jumlah Suara': 0,
           'Nama Perwakilan Terpilih': 'Belum ada calon terpilih (Syarat minimal 1 suara sah)',
           'No. Anggota': '-',
           'Perolehan Suara Sah': 0,
@@ -184,9 +199,10 @@ export const AdminReportsExport: React.FC = () => {
           exportData.push({
             'No': rowNum++,
             'Bagian / Divisi': d.nama_bagian,
-            'Kuota Kursi': d.kuota_kursi,
-            'Status Kelulusan Bagian': `${elected.length}/${d.kuota_kursi} Kursi Terisi`,
-            'No. Urut': c.nomor_urut,
+            'Kuota / Kursi': `${d.kuota_kursi} Kursi (${totalDivMembers} Anggota)`,
+            'Jumlah Pemilih': votedDivMembers,
+            'Jumlah Tidak Memilih': notVotedDivMembers,
+            'Jumlah Suara': c.total_suara || 0,
             'Nama Perwakilan Terpilih': c.nama,
             'No. Anggota': c.nomor_anggota,
             'Perolehan Suara Sah': c.total_suara || 0,
@@ -316,14 +332,21 @@ export const AdminReportsExport: React.FC = () => {
                 <tr>
                   <th className="py-2.5 px-3 border-r border-gray-300 w-12 text-center">No</th>
                   <th className="py-2.5 px-3 border-r border-gray-300">Bagian / Divisi</th>
-                  <th className="py-2.5 px-3 border-r border-gray-300 text-center w-28">Kuota Kursi</th>
-                  <th className="py-2.5 px-3 border-r border-gray-300">Nama Perwakilan Terpilih</th>
+                  <th className="py-2.5 px-3 border-r border-gray-300 text-center w-28">Kuota / Kursi</th>
+                  <th className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Jumlah Pemilih</th>
+                  <th className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Jumlah Tidak Memilih</th>
                   <th className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Jumlah Suara</th>
                   <th className="py-2.5 px-3 text-center w-20">Persentase</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 text-gray-800">
                 {results.map((divRes, idx) => {
+                  // Calculate voters and non-voters for this division
+                  const divMembers = members.filter(m => m.bagian_id === divRes.bagian_id);
+                  const totalDivMembers = divMembers.length;
+                  const votedDivMembers = divMembers.filter(m => m.status_memilih === 'SUDAH_MEMILIH').length;
+                  const notVotedDivMembers = totalDivMembers - votedDivMembers;
+
                   // Strictly filter: candidate MUST have at least 1 vote (> 0) and status_kursi === 'TERPILIH'
                   const elected = divRes.candidates.filter(
                     c => (c.status_kursi === 'TERPILIH' || c.status_terpilih === 'TERPILIH') && (c.total_suara || 0) > 0
@@ -340,41 +363,21 @@ export const AdminReportsExport: React.FC = () => {
                       <td className="py-2.5 px-3 text-center font-mono border-r border-gray-200">
                         <div className="font-bold">{divRes.kuota_kursi} Kursi</div>
                         <div className="text-[10px] text-gray-500 font-sans">
-                          {elected.length > 0 ? `(${elected.length} terisi)` : '(0 terisi)'}
+                          {totalDivMembers} Anggota
+                          {elected.length > 0 ? ` (${elected.length} terisi)` : ' (0 terisi)'}
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 border-r border-gray-200">
-                        {elected.length === 0 ? (
-                          <span className="text-gray-400 italic">Belum ada calon terpilih</span>
-                        ) : (
-                          <div className="space-y-1.5">
-                            {elected.map((c, cIdx) => {
-                              const percent = divRes.total_suara_masuk > 0
-                                ? Math.round((c.total_suara / divRes.total_suara_masuk) * 100)
-                                : 0;
-                              return (
-                                <div key={c.kandidat_id} className="flex items-center justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <span className="font-extrabold text-gray-900 text-[11px]">
-                                      {cIdx + 1}. {c.nama}
-                                    </span>
-                                    <div className="text-[9px] text-gray-500 font-mono truncate">
-                                      No. Anggota: {c.nomor_anggota}
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                    <div className="font-black text-emerald-700 text-sm font-mono">
-                                      {c.total_suara}
-                                    </div>
-                                    <div className="text-[9px] text-gray-400 font-mono">
-                                      suara ({percent}%)
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                      <td className="py-2.5 px-3 text-center font-mono border-r border-gray-200">
+                        {votedDivMembers}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono border-r border-gray-200">
+                        {notVotedDivMembers}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono border-r border-gray-200">
+                        {divRes.total_suara_masuk || 0}
+                      </td>
+                      <td className="py-2.5 px-3 text-center w-20">
+                        {divRes.total_suara_masuk > 0 ? `${divRes.partisipasi_persen}%` : '0%'}
                       </td>
                     </tr>
                   );
