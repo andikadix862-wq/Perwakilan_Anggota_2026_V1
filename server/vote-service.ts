@@ -99,15 +99,31 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       throw error;
     }
 
-    // 7. UPDATE MEMBER STATUS (async, non-blocking)
-    supabase.from('members')
+    // 7. UPDATE MEMBER STATUS (await to ensure consistency)
+    const { error: updateError } = await supabase.from('members')
       .update({ status_memilih: 'SUDAH_MEMILIH' })
-      .eq('email', member.email)
-      .then(({ error: updateError }) => {
-        if (updateError) console.error('[VoteService] Status update failed:', updateError);
-      });
+      .eq('email', member.email);
+    if (updateError) {
+      console.error('[VoteService] Status update failed:', updateError);
+    }
 
-    // 8. EMIT REALTIME EVENT (fire-and-forget) - NO member_email in payload
+    // 8. UPDATE CANDIDATE VOTE COUNT
+    const { data: currentCandidate } = await supabase.from('candidates')
+      .select('total_suara')
+      .eq('kandidat_id', candidate_id)
+      .single();
+    
+    if (currentCandidate) {
+      const newTotalSuara = (currentCandidate.total_suara || 0) + 1;
+      const { error: candError } = await supabase.from('candidates')
+        .update({ total_suara: newTotalSuara })
+        .eq('kandidat_id', candidate_id);
+      if (candError) {
+        console.error('[VoteService] Candidate vote count update failed:', candError);
+      }
+    }
+
+    // 9. EMIT REALTIME EVENT (fire-and-forget) - NO member_email in payload
     try {
       const channel = supabase.channel('votes');
       channel.send({
