@@ -1869,7 +1869,7 @@ export function deleteMember(email: string, adminEmail = 'admin'): { success: bo
 }
 
 // Reset member voting status (Admin emergency/testing function with audit trail)
-export function resetMemberVotingStatus(identifier: string, adminEmail = 'admin', reason = 'Testing / Reset manual'): { success: boolean; message?: string; memberName?: string } {
+export async function resetMemberVotingStatus(identifier: string, adminEmail = 'admin', reason = 'Testing / Reset manual'): Promise<{ success: boolean; message?: string; memberName?: string }> {
   const db = getDatabase();
   if (!identifier) return { success: false, message: 'Identifier anggota diperlukan.' };
 
@@ -1917,6 +1917,29 @@ export function resetMemberVotingStatus(identifier: string, adminEmail = 'admin'
   syncCandidatesWithMembers();
   saveDatabaseToFile();
 
+  // 5. Sync to Supabase
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Reset member status in Supabase
+    await supabase.from('members')
+      .update({ status_memilih: 'BELUM_MEMILIH', voted_at: null, transaction_id: null })
+      .eq('email', memberEmail);
+    
+    // Clear votes in Supabase
+    await supabase.from('votes').delete().eq('member_email', memberEmail);
+    
+    // Also try to delete by transaction_id if exists
+    if (oldTx) {
+      await supabase.from('votes').delete().eq('transaction_id', oldTx);
+    }
+  } catch (err) {
+    console.error('[resetMemberVotingStatus] Failed to sync to Supabase:', err);
+  }
+
   addAuditLog({
     user_email: adminEmail,
     user_role: 'SUPER_ADMIN',
@@ -1929,12 +1952,12 @@ export function resetMemberVotingStatus(identifier: string, adminEmail = 'admin'
 }
 
 // Reset ALL votes in the database (clear votes table & reset member status to BELUM_MEMILIH)
-export function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): {
+export async function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): Promise<{
   success: boolean;
   totalVotesReset: number;
   totalMembersReset: number;
   message: string;
-} {
+}> {
   const db = getDatabase();
   const totalVotesReset = db.votes.length;
   let totalMembersReset = 0;
@@ -1964,6 +1987,27 @@ export function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): {
   syncDivisionStats();
   syncCandidatesWithMembers();
   saveDatabaseToFile();
+
+  // 5. Sync to Supabase
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Reset member status in Supabase
+    await supabase.from('members')
+      .update({ status_memilih: 'BELUM_MEMILIH', voted_at: null, transaction_id: null })
+      .neq('email', ''); // Update all members
+    
+    // Clear votes in Supabase
+    await supabase.from('votes').delete().neq('vote_id', '');
+    
+    // Reset candidate vote counts in Supabase
+    await supabase.from('candidates').update({ total_suara: 0 }).neq('kandidat_id', '');
+  } catch (err) {
+    console.error('[resetAllVotes] Failed to sync to Supabase:', err);
+  }
 
   addAuditLog({
     user_email: adminEmail,
