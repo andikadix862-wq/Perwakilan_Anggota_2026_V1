@@ -22,11 +22,18 @@ import {
   Filter,
   BarChart3,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Bell
 } from 'lucide-react';
 import { api, VoterDashboardResponse, SubmitVoteResponse } from '../services/api';
 import { Candidate, Member } from '../types';
 import { ConfirmationModal } from './ConfirmationModal';
+
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
 
 interface VotingPageProps {
   member: Member;
@@ -49,12 +56,25 @@ export const VotingPage: React.FC<VotingPageProps> = ({
   const [filterTab, setFilterTab] = useState<'all' | 'ada_suara' | 'eligible' | 'ineligible'>('all');
   const [divisionTotalVotes, setDivisionTotalVotes] = useState<number>(0);
 
-  // Single selection: 1 Anggota = 1 Suara = 1 Kandidat
+  // Single Selection: 1 Anggota = 1 Suara = 1 Kandidat
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Toast notifications
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdCounter = useState(0)[0]; // Use useRef in real impl, but this works for demo
+  let toastCounter = 0;
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = ++toastCounter;
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -115,11 +135,11 @@ export const VotingPage: React.FC<VotingPageProps> = ({
 
   const handleConfirmSubmit = async () => {
     if (!selectedCandidateId) {
-      alert('Silakan pilih 1 kandidat perwakilan terlebih dahulu.');
+      showToast('Silakan pilih 1 kandidat perwakilan terlebih dahulu.', 'error');
       return;
     }
     if (!token) {
-      alert('Sesi tidak valid. Silakan login kembali.');
+      showToast('Sesi tidak valid. Silakan login kembali.', 'error');
       return;
     }
 
@@ -127,12 +147,16 @@ export const VotingPage: React.FC<VotingPageProps> = ({
       setSubmitting(true);
       const res = await api.submitVote(selectedCandidateId, token);
       if (res.success) {
+        showToast('Suara Anda telah berhasil direkam!', 'success');
         setIsModalOpen(false);
         // Lock page and navigate to thank-you/receipt page
         onVoteSuccess(res);
+      } else {
+        showToast(res.message || 'Gagal mengirim suara. Silakan coba kembali.', 'error');
+        setIsModalOpen(false);
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal mengirim suara. Silakan coba kembali.');
+      showToast(err.message || 'Gagal mengirim suara. Silakan coba kembali.', 'error');
       setIsModalOpen(false);
     } finally {
       setSubmitting(false);
@@ -984,6 +1008,25 @@ export const VotingPage: React.FC<VotingPageProps> = ({
         onClose={() => setIsModalOpen(false)}
         onConfirmSubmit={handleConfirmSubmit}
       />
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg animate-in slide-in-from-right duration-300 min-w-[280px] max-w-md ${
+              toast.type === 'success' ? 'bg-emerald-600 text-white' :
+              toast.type === 'error' ? 'bg-red-600 text-white' :
+              'bg-blue-600 text-white'
+            }`}
+          >
+            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 shrink-0" />}
+            {toast.type === 'error' && <AlertCircle className="w-5 h-5 shrink-0" />}
+            {toast.type === 'info' && <Bell className="w-5 h-5 shrink-0" />}
+            <span className="text-xs font-medium flex-1">{toast.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
