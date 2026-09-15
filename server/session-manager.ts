@@ -1,41 +1,84 @@
 /**
  * Session Token Management
- * Generates and validates cryptographically secure session tokens
+ * Generates and validates cryptographically secure JWT tokens (stateless for serverless)
  */
 
 import crypto from 'crypto';
 
-// In-memory token store (for single-instance deployment)
-// In production with multiple instances, use Redis or database
-const tokenStore = new Map<string, { email: string; createdAt: number; expiresAt: number }>();
+// Secret key for signing tokens (should be in env var in production)
+const JWT_SECRET = process.env.SESSION_SECRET || 'kopsyah-ykk-session-secret-2026-change-in-production';
+const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Token expiration: 24 hours
-const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
+interface TokenPayload {
+  email: string;
+  iat: number;
+  exp: number;
+}
 
 /**
- * Generate a cryptographically secure random token
+ * Generate a cryptographically secure JWT token
  */
-export function generateToken(): string {
-  return crypto.randomBytes(48).toString('hex');
+function base64UrlEncode(str: string): string {
+  return Buffer.from(str).toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function base64UrlDecode(str: string): string {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  return Buffer.from(str, 'base64').toString('utf-8');
+}
+
+function sign(payload: TokenPayload): string {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const data = `${encodedHeader}.${encodedPayload}`;
+  const signature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  return `${data}.${signature}`;
+}
+
+function verify(token: string): TokenPayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const [encodedHeader, encodedPayload, signature] = parts;
+    const data = `${encodedHeader}.${encodedPayload}`;
+    const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    if (signature !== expectedSignature) return null;
+    
+    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as TokenPayload;
+    
+    // Check expiry
+    if (Date.now() > payload.exp) return null;
+    
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Create a session token for a member
  */
 export function createSessionToken(email: string): string {
-  const token = generateToken();
   const now = Date.now();
-  
-  tokenStore.set(token, {
+  const payload: TokenPayload = {
     email: email.toLowerCase(),
-    createdAt: now,
-    expiresAt: now + TOKEN_EXPIRY_MS
-  });
-  
-  // Clean up expired tokens periodically
-  cleanupExpiredTokens();
-  
-  return token;
+    iat: now,
+    exp: now + TOKEN_EXPIRY_MS
+  };
+  return sign(payload);
 }
 
 /**
@@ -46,37 +89,21 @@ export function validateSessionToken(token: string): { email: string; valid: boo
     return { email: '', valid: false };
   }
   
-  const session = tokenStore.get(token);
-  if (!session) {
+  const payload = verify(token);
+  if (!payload) {
     return { email: '', valid: false };
   }
   
-  // Check if token is expired
-  if (Date.now() > session.expiresAt) {
-    tokenStore.delete(token);
-    return { email: '', valid: false };
-  }
-  
-  return { email: session.email, valid: true };
+  return { email: payload.email, valid: true };
 }
 
 /**
- * Invalidate a session token (logout)
+ * Invalidate a session token (logout) - stateless, just returns true
+ * In practice, you'd maintain a blocklist in Redis/database for true invalidation
  */
 export function invalidateSessionToken(token: string): void {
-  tokenStore.delete(token);
-}
-
-/**
- * Clean up expired tokens
- */
-function cleanupExpiredTokens(): void {
-  const now = Date.now();
-  for (const [token, session] of tokenStore.entries()) {
-    if (now > session.expiresAt) {
-      tokenStore.delete(token);
-    }
-  }
+  // Stateless - token will expire naturally
+  // For production, add to blocklist in Redis/DB
 }
 
 /**
