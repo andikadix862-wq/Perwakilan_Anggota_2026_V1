@@ -1454,6 +1454,21 @@ export function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'a
   syncDivisionStats();
   saveDatabaseToFile();
 
+  // Save config to Supabase relational table
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    Object.entries(newConfig).forEach(([key, value]) => {
+      supabase.from('config').upsert({ key, value: String(value) }, { onConflict: 'key' })
+        .catch(err => console.error(`[updateConfig] Error saving config ${key}:`, err));
+    });
+  } catch (err) {
+    console.error('[updateConfig] Failed to save config to Supabase:', err);
+  }
+
   addAuditLog({
     user_email: adminEmail,
     user_role: 'SUPER_ADMIN',
