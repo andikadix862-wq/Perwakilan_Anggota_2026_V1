@@ -44,6 +44,7 @@ interface VotingPageProps {
 
 export const VotingPage: React.FC<VotingPageProps> = ({
   member,
+  token,
   onBack,
   onVoteSuccess
 }) => {
