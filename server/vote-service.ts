@@ -155,7 +155,13 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       console.log('[VoteService] Realtime event not sent:', realtimeErr.message);
     }
 
-    return { success: true, message: 'Suara Anda telah berhasil direkam.', vote_id };
+    return { 
+    success: true, 
+    message: 'Suara Anda telah berhasil direkam.', 
+    vote_id,
+    transaction_id: vote_id,
+    timestamp: new Date().toISOString()
+  };
 
   } catch (err: any) {
     console.error('[VoteService] Vote submission error:', err);
