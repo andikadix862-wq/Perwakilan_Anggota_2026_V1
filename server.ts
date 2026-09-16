@@ -1171,14 +1171,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Election Results with Tie-Break Detection (PRD Section 21 & 22)
-  app.get('/api/admin/results', (req, res) => {
-    const results = calculateResults();
-    const config = getConfig();
-    res.json({ success: true, results, config });
+  app.get('/api/admin/results', async (req, res) => {
+    try {
+      const results = await calculateResults();
+      const config = getConfig();
+      res.json({ success: true, results, config });
+    } catch (error) {
+      console.error('Results error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengambil hasil pemilihan' });
+    }
   });
 
   // Resolve Tie-Break
-  app.post('/api/admin/tie-break', (req, res) => {
+  app.post('/api/admin/tie-break', async (req, res) => {
     const { bagian_id, election_id, candidate_ids, winner_ids, catatan_keputusan, resolved_by } = req.body;
     if (!bagian_id || !winner_ids || !Array.isArray(winner_ids)) {
       return res.status(400).json({ success: false, message: 'Data penyelesaian tie-break tidak lengkap.' });
@@ -1193,7 +1198,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       resolved_by: resolved_by || 'admin'
     });
 
-    res.json({ success: true, decision, results: calculateResults() });
+    const results = await calculateResults();
+    res.json({ success: true, decision, results });
   });
 
   // Monitoring: Real-time Votes Feed (PRD Section 17 & 20)
