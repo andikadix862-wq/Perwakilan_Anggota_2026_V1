@@ -1995,10 +1995,10 @@ export async function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): Promis
     const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
-    // Reset member status in Supabase
+    // Reset member status in Supabase - use a condition that matches all rows
     await supabase.from('members')
-      .update({ status_memilih: 'BELUM_MEMILIH', voted_at: null, transaction_id: null })
-      .neq('email', ''); // Update all members
+      .update({ status_memilih: 'BELUM_MEMILIH' })
+      .neq('nomor_anggota', ''); // Update all members (everyone has nomor_anggota)
     
     // Clear votes in Supabase
     await supabase.from('votes').delete().neq('vote_id', '');
