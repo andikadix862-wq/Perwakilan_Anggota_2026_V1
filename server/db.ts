@@ -1909,7 +1909,7 @@ export async function resetMemberVotingStatus(identifier: string, adminEmail = '
     db.votes = db.votes.filter(v => v.transaction_id !== oldTx);
   }
   db.votes = db.votes.filter(v => 
-    (!v.voter_email || v.voter_email.toLowerCase() !== memberEmail.toLowerCase()) &&
+    (!v.member_email || v.member_email.toLowerCase() !== memberEmail.toLowerCase()) &&
     (!v.voter_nik || v.voter_nik.toUpperCase() !== memberNik.toUpperCase())
   );
 

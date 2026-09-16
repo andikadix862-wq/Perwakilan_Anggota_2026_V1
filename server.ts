@@ -1023,7 +1023,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Reset Member Voting Status (Testing / Emergency with Audit Trail)
-  app.post('/api/admin/members/reset-status', (req, res) => {
+  app.post('/api/admin/members/reset-status', async (req, res) => {
     try {
       const adminPassword = req.body.adminPassword || req.body.password || (req.headers['x-admin-password'] as string);
       if (!verifyAdminPassword(adminPassword)) {
@@ -1036,7 +1036,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         return res.status(400).json({ success: false, message: 'Email, NIK, atau ID Transaksi anggota diperlukan.' });
       }
 
-      const result = resetMemberVotingStatus(target, adminEmail || 'admin@kopsyah-ykk.id', reason || 'Reset manual oleh Admin');
+      const result = await resetMemberVotingStatus(target, adminEmail || 'admin@kopsyah-ykk.id', reason || 'Reset manual oleh Admin');
       if (!result.success) {
         return res.status(404).json({ success: false, message: result.message || 'Anggota atau data transaksi tidak ditemukan.' });
       }
@@ -1049,7 +1049,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Reset ALL Votes / Batalkan Seluruh Data Suara
-  app.post(['/api/admin/reset-votes', '/api/admin/votes/reset'], (req, res) => {
+  app.post(['/api/admin/reset-votes', '/api/admin/votes/reset'], async (req, res) => {
     try {
       const adminPassword = req.body.adminPassword || req.body.password || (req.headers['x-admin-password'] as string);
       if (!verifyAdminPassword(adminPassword)) {
@@ -1057,7 +1057,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       }
 
       const adminEmail = (req.headers['x-admin-email'] as string) || req.body.adminEmail || 'admin@kopsyah-ykk.id';
-      const result = resetAllVotes(adminEmail);
+      const result = await resetAllVotes(adminEmail);
       res.json(result);
     } catch (error: any) {
       console.error('Gagal reset suara:', error);
