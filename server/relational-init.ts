@@ -82,7 +82,10 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
     voting_start: configMap.voting_start || '',
     voting_end: configMap.voting_end || '',
     ratio_anggota_perwakilan: configMap.ratio_anggota_perwakilan || 10,
-    election_type: configMap.election_type || 'PEMILIHAN_PERWAKILAN'
+    election_type: configMap.election_type || 'PEMILIHAN_PERWAKILAN',
+    batas_tahun_sebelum_pensiun: configMap.batas_tahun_sebelum_pensiun || 4,
+    max_vote_per_member_rule: configMap.max_vote_per_member_rule || 'SEJUMLAH_KURSI_BAGIAN',
+    custom_max_vote: configMap.custom_max_vote || 1
   } as ElectionConfig;
   
   // Diagnostic: Log counts (not individual data)
