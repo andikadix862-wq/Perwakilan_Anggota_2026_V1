@@ -2190,7 +2190,140 @@ export function getDashboardStats(): DashboardStats {
 }
 
 // Get Full Election Results by Division with Tie Detection & Resolution
-export function calculateResults(): DivisionResult[] {
+// ASYNC VERSION: Queries Supabase directly for votes (serverless-compatible)
+export async function calculateResults(): Promise<DivisionResult[]> {
+  const db = getDatabase();
+  syncDivisionStats();
+  syncCandidatesWithMembers();
+
+  // Load votes from Supabase
+  const { createClient } = require('@supabase/supabase-js');
+  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  
+  const { data: votesData, error: votesError } = await supabase.from('votes').select('*');
+  if (votesError) {
+    console.error('[calculateResults] Error loading votes:', votesError);
+    // Fallback to in-memory
+    return calculateResultsSync();
+  }
+  const votes = (votesData || []) as VoteRecord[];
+
+  const results: DivisionResult[] = [];
+
+  for (const div of db.divisions) {
+    const candidatesInDiv = db.candidates.filter(c => c.bagian_id === div.bagian_id && c.status_kandidat === 'AKTIF');
+    const votesInDiv = votes.filter(v => v.division_id === div.bagian_id && v.status === 'VALID');
+    const totalVotesInDiv = votesInDiv.length;
+
+    // Count votes per candidate
+    const candidateResults: CandidateResult[] = candidatesInDiv.map(c => {
+      const voteCount = votesInDiv.filter(v => v.candidate_id === c.kandidat_id).length;
+      const percentage = totalVotesInDiv > 0 ? Math.round((voteCount / totalVotesInDiv) * 1000) / 10 : 0;
+      return {
+        kandidat_id: c.kandidat_id,
+        nomor_urut: c.nomor_urut,
+        nama: c.nama,
+        nomor_anggota: c.nomor_anggota,
+        bagian_id: c.bagian_id,
+        nama_bagian: c.nama_bagian,
+        foto: c.foto,
+        total_suara: voteCount,
+        persentase_suara: percentage,
+        rank: 0,
+        status_terpilih: 'TIDAK_TERPILIH',
+        status_kursi: 'TIDAK_TERPILIH'
+      };
+    });
+
+    // Sort by votes descending, then by candidate number ascending
+    candidateResults.sort((a, b) => {
+      if (b.total_suara !== a.total_suara) {
+        return b.total_suara - a.total_suara;
+      }
+      return a.nomor_urut - b.nomor_urut;
+    });
+
+    // Assign rank (1, 2, 3, ...)
+    candidateResults.forEach((c, idx) => {
+      c.rank = idx + 1;
+    });
+
+    const kuota = div.kuota_perwakilan;
+    let hasTie = false;
+    const tieCandidates: Candidate[] = [];
+
+    // Check tie at cutoff boundary
+    if (kuota > 0 && candidateResults.length > kuota && totalVotesInDiv > 0) {
+      const cutoffCandidate = candidateResults[kuota - 1];
+      const nextCandidate = candidateResults[kuota];
+
+      if (cutoffCandidate.total_suara > 0 && cutoffCandidate.total_suara === nextCandidate.total_suara) {
+        // TIE DETECTED
+        hasTie = true;
+        const tieVoteCount = cutoffCandidate.total_suara;
+        const tiedResults = candidateResults.filter(c => c.total_suara === tieVoteCount);
+
+        tiedResults.forEach(tr => {
+          const original = db.candidates.find(c => c.kandidat_id === tr.kandidat_id);
+          if (original) tieCandidates.push(original);
+        });
+      }
+    }
+
+    // Check if there is an official admin tie-break decision
+    const tieDecision = db.tieBreaks.find(t => t.bagian_id === div.bagian_id);
+
+    candidateResults.forEach((c, idx) => {
+      // RULE: Kuota must be > 0, division must have votes, and candidate MUST have at least 1 vote (total_suara > 0)
+      if (kuota <= 0 || totalVotesInDiv === 0 || c.total_suara <= 0) {
+        c.status_terpilih = 'TIDAK_TERPILIH';
+        c.status_kursi = 'TIDAK_TERPILIH';
+        return;
+      }
+
+      if (idx < kuota) {
+        if (hasTie && tieCandidates.some(tc => tc.kandidat_id === c.kandidat_id)) {
+          // Candidate is in tie - wait for admin decision
+          if (tieDecision && tieDecision.winner_ids.includes(c.kandidat_id)) {
+            c.status_terpilih = 'TERPILIH';
+            c.status_kursi = 'TERPILIH';
+          } else {
+            c.status_terpilih = 'SERI_MENUNGGU_KEPUTUSAN';
+            c.status_kursi = 'SERI';
+          }
+        } else {
+          c.status_terpilih = 'TERPILIH';
+          c.status_kursi = 'TERPILIH';
+        }
+      } else {
+        c.status_terpilih = 'TIDAK_TERPILIH';
+        c.status_kursi = 'TIDAK_TERPILIH';
+      }
+    });
+
+    results.push({
+      bagian_id: div.bagian_id,
+      nama_bagian: div.nama_bagian,
+      kuota_kursi: kuota,
+      total_anggota: db.members.filter(m => m.bagian_id === div.bagian_id).length,
+      total_suara_masuk: totalVotesInDiv,
+      partisipasi_persen: db.members.filter(m => m.bagian_id === div.bagian_id).length > 0
+        ? Math.round((totalVotesInDiv / db.members.filter(m => m.bagian_id === div.bagian_id).length) * 100)
+        : 0,
+      candidates: candidateResults,
+      has_tie: hasTie,
+      tie_candidates: tieCandidates,
+      tie_decision: tieDecision
+    });
+  }
+
+  return results;
+}
+
+// SYNC VERSION: For backward compatibility (uses in-memory dbState.votes)
+function calculateResultsSync(): DivisionResult[] {
   const db = getDatabase();
   syncDivisionStats();
   syncCandidatesWithMembers();
@@ -2240,7 +2373,6 @@ export function calculateResults(): DivisionResult[] {
     const tieCandidates: Candidate[] = [];
 
     // Check tie at cutoff boundary
-    // If kuota is K, we examine candidate at index K-1 vs K
     if (kuota > 0 && candidateResults.length > kuota && totalVotesInDiv > 0) {
       const cutoffCandidate = candidateResults[kuota - 1];
       const nextCandidate = candidateResults[kuota];
@@ -2250,7 +2382,7 @@ export function calculateResults(): DivisionResult[] {
         hasTie = true;
         const tieVoteCount = cutoffCandidate.total_suara;
         const tiedResults = candidateResults.filter(c => c.total_suara === tieVoteCount);
-        
+
         tiedResults.forEach(tr => {
           const original = db.candidates.find(c => c.kandidat_id === tr.kandidat_id);
           if (original) tieCandidates.push(original);
@@ -2269,42 +2401,39 @@ export function calculateResults(): DivisionResult[] {
         return;
       }
 
-      if (hasTie) {
-        const isTied = tieCandidates.some(tc => tc.kandidat_id === c.kandidat_id);
-        if (isTied) {
+      if (idx < kuota) {
+        if (hasTie && tieCandidates.some(tc => tc.kandidat_id === c.kandidat_id)) {
+          // Candidate is in tie - wait for admin decision
           if (tieDecision && tieDecision.winner_ids.includes(c.kandidat_id)) {
             c.status_terpilih = 'TERPILIH';
             c.status_kursi = 'TERPILIH';
-          } else if (tieDecision && !tieDecision.winner_ids.includes(c.kandidat_id)) {
-            c.status_terpilih = 'TIDAK_TERPILIH';
-            c.status_kursi = 'TIDAK_TERPILIH';
           } else {
-            c.status_terpilih = 'TIE'; // PERLU KEPUTUSAN ADMIN
-            c.status_kursi = 'TIE';
+            c.status_terpilih = 'SERI_MENUNGGU_KEPUTUSAN';
+            c.status_kursi = 'SERI';
           }
         } else {
-          const isElected = idx < kuota && c.total_suara > 0;
-          c.status_terpilih = isElected ? 'TERPILIH' : 'TIDAK_TERPILIH';
-          c.status_kursi = isElected ? 'TERPILIH' : 'TIDAK_TERPILIH';
+          c.status_terpilih = 'TERPILIH';
+          c.status_kursi = 'TERPILIH';
         }
       } else {
-        const isElected = idx < kuota && c.total_suara > 0;
-        c.status_terpilih = isElected ? 'TERPILIH' : 'TIDAK_TERPILIH';
-        c.status_kursi = isElected ? 'TERPILIH' : 'TIDAK_TERPILIH';
+        c.status_terpilih = 'TIDAK_TERPILIH';
+        c.status_kursi = 'TIDAK_TERPILIH';
       }
     });
 
     results.push({
       bagian_id: div.bagian_id,
       nama_bagian: div.nama_bagian,
-      total_anggota: div.total_anggota,
-      kuota_kursi: div.kuota_perwakilan,
+      kuota_kursi: kuota,
+      total_anggota: db.members.filter(m => m.bagian_id === div.bagian_id).length,
       total_suara_masuk: totalVotesInDiv,
-      partisipasi_persen: div.partisipasi_persen,
-      has_tie: hasTie && !tieDecision,
-      has_tie_break: hasTie && !tieDecision,
+      partisipasi_persen: db.members.filter(m => m.bagian_id === div.bagian_id).length > 0
+        ? Math.round((totalVotesInDiv / db.members.filter(m => m.bagian_id === div.bagian_id).length) * 100)
+        : 0,
+      candidates: candidateResults,
+      has_tie: hasTie,
       tie_candidates: tieCandidates,
-      candidates: candidateResults
+      tie_decision: tieDecision
     });
   }
 
