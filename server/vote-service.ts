@@ -11,6 +11,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { VoteRecord, Member, Candidate } from '../src/types';
 import { validateMemberToken, AuthenticatedMember } from './voting-auth';
+import { getDatabase } from './db';
 
 // Use server-side environment variables (no VITE_ prefix for service role key)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
@@ -19,6 +20,21 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_S
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
+
+// Sync vote to in-memory dbState for calculateResults
+function syncVoteToDbState(vote: VoteRecord): void {
+  try {
+    const db = getDatabase();
+    // Check if vote already exists (avoid duplicates)
+    const exists = db.votes.some(v => v.vote_id === vote.vote_id);
+    if (!exists) {
+      db.votes.push(vote);
+      console.log('[VoteService] Vote synced to dbState:', vote.vote_id);
+    }
+  } catch (err) {
+    console.warn('[VoteService] Failed to sync vote to dbState:', err);
+  }
+}
 
 // ===================== VOTE SUBMISSION =====================
 
@@ -98,6 +114,9 @@ export async function submitVote(params: VoteSubmissionParams): Promise<VoteResu
       }
       throw error;
     }
+
+    // Sync vote to in-memory dbState for calculateResults
+    syncVoteToDbState(voteData);
 
     // 7. UPDATE MEMBER STATUS (await to ensure consistency)
     const { error: updateError } = await supabase.from('members')
