@@ -14,7 +14,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { ElectionConfig, VotingStatus } from '../../types';
+import { ElectionConfig, VotingStatus, MaxVoteRule } from '../../types';
 import { IndonesianDateTimePicker } from './IndonesianDateTimePicker';
 
 interface AdminElectionConfigProps {
@@ -219,8 +219,21 @@ export const AdminElectionConfig: React.FC<AdminElectionConfigProps> = ({
                 Aturan Maksimal Pilihan Suara
               </label>
               <select
-                value={config.aturan_maksimal_pilihan}
-                onChange={e => setConfig({ ...config, aturan_maksimal_pilihan: e.target.value as any })}
+                value={config.max_vote_per_member_rule === 'SEJUMLAH_KURSI_BAGIAN' ? 'SESUAI_KUOTA_BAGIAN' : config.max_vote_per_member_rule === 'TEPAT_SATU' ? 'SATU_PILIHAN' : 'CUSTOM'}
+                onChange={e => {
+                  const val = e.target.value;
+                  let rule: MaxVoteRule = 'SEJUMLAH_KURSI_BAGIAN';
+                  let custom = 1;
+                  if (val === 'SESUAI_KUOTA_BAGIAN') {
+                    rule = 'SEJUMLAH_KURSI_BAGIAN';
+                  } else if (val === 'SATU_PILIHAN') {
+                    rule = 'TEPAT_SATU';
+                  } else if (val === 'CUSTOM') {
+                    rule = 'CUSTOM';
+                    custom = config.custom_max_vote || 1;
+                  }
+                  setConfig({ ...config, max_vote_per_member_rule: rule, custom_max_vote: custom });
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-gray-300 text-xs outline-hidden focus:border-blue-700 bg-white font-medium"
               >
                 <option value="SESUAI_KUOTA_BAGIAN">Sesuai Kuota Kursi Bagian (Misal: 5 kursi = max 5 pilihan)</option>
