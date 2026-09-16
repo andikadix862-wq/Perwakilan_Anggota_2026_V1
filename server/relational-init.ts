@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import type { DatabaseState, Member, Candidate, Division, AdminUser, ElectionConfig } from '../src/types';
+import type { DatabaseState, Member, Candidate, Division, AdminUser, ElectionConfig, VoteRecord } from '../src/types';
 
 // Use server-side environment variables (no VITE_ prefix for service role key)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
@@ -33,12 +33,13 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
   console.log('[RelationalInit] Loading from Supabase relational tables...');
   
   // Load all tables in parallel
-  const [membersRes, candidatesRes, divisionsRes, adminsRes, configRes] = await Promise.all([
+  const [membersRes, candidatesRes, divisionsRes, adminsRes, configRes, votesRes] = await Promise.all([
     supabase.from('members').select('*'),
     supabase.from('candidates').select('*'),
     supabase.from('divisions').select('*'),
     supabase.from('admins').select('*'),
-    supabase.from('config').select('*')
+    supabase.from('config').select('*'),
+    supabase.from('votes').select('*')
   ]);
   
   if (membersRes.error) {
@@ -56,12 +57,16 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
   if (configRes.error) {
     throw new Error(`Failed to load config: ${configRes.error.message}`);
   }
+  if (votesRes.error) {
+    console.warn(`[RelationalInit] WARNING: Failed to load votes: ${votesRes.error.message}`);
+  }
   
   const members = membersRes.data as Member[] || [];
   // DO NOT load candidates from Supabase - generate fresh from members
   const candidates = [] as Candidate[];
   const divisions = divisionsRes.data as Division[] || [];
   const admins = adminsRes.data as AdminUser[] || [];
+  const votes = votesRes.data as VoteRecord[] || [];
   
   // Convert config rows to key-value map
   const configMap: Record<string, any> = {};
@@ -81,7 +86,7 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
   } as ElectionConfig;
   
   // Diagnostic: Log counts (not individual data)
-  console.log(`[RelationalInit] Loaded: ${members.length} members, ${candidates.length} candidates, ${divisions.length} divisions, ${admins.length} admins`);
+  console.log(`[RelationalInit] Loaded: ${members.length} members, ${candidates.length} candidates, ${divisions.length} divisions, ${admins.length} admins, ${votes.length} votes`);
   
   // Verify expected counts
   if (members.length !== 436) {
@@ -98,7 +103,7 @@ export async function initializeDatabaseFromRelational(): Promise<DatabaseState>
     divisions,
     admins,
     config,
-    votes: [], // Votes loaded separately via database-service
+    votes,
     auditLogs: [],
     tieBreaks: []
   };
