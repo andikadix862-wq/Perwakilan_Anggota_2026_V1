@@ -243,11 +243,25 @@ export const IndonesianDateTimePicker: React.FC<IndonesianDateTimePickerProps> =
         <div className="sm:col-span-3">
           <div className="relative">
             <input
-              type="date"
+              type="text"
               title="Pilih Tanggal Kalender"
-              value={datePart}
-              onChange={e => handleDateChange(e.target.value)}
-              className="w-full h-10 px-2 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 focus:border-blue-700 outline-hidden"
+              value={datePart ? `${datePart.split('-')[2]}/${datePart.split('-')[1]}/${datePart.split('-')[0]}` : ''}
+              onClick={(e) => {
+                // Create a hidden date input to show native picker
+                const dateInput = document.createElement('input');
+                dateInput.type = 'date';
+                dateInput.value = datePart;
+                dateInput.onchange = (ev) => handleDateChange((ev.target as HTMLInputElement).value);
+                dateInput.style.position = 'absolute';
+                dateInput.style.opacity = '0';
+                dateInput.style.pointerEvents = 'none';
+                document.body.appendChild(dateInput);
+                dateInput.click();
+                setTimeout(() => document.body.removeChild(dateInput), 100);
+              }}
+              readOnly
+              className="w-full h-10 px-2 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 focus:border-blue-700 outline-hidden cursor-pointer"
+              placeholder="DD/MM/YYYY"
             />
           </div>
         </div>
