@@ -218,7 +218,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         return res.status(403).json({
           success: false,
           error_title: 'PEMILIHAN BELUM DIBUKA',
-          message: `Pemilihan akan dimulai pada ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeStyle: 'medium' }).format(votingStart)}. Silakan coba kembali setelah waktu pemilihan dimulai.`
+          message: `Pemilihan akan dimulai pada ${votingStart.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'long', timeStyle: 'medium' })}. Silakan coba kembali setelah waktu pemilihan dimulai.`
         });
       }
       if (config.voting_status === 'AKTIF' && votingEnd && now > votingEnd) {
@@ -233,7 +233,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         return res.status(403).json({
           success: false,
           error_title: 'PEMILIHAN SUDAH DITUTUP',
-          message: 'Pemilihan telah berakhir. Terima kasih atas partisipasi Anda.'
+          message: `Pemilihan telah berakhir pada ${votingEnd.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'long', timeStyle: 'medium' })}. Terima kasih atas partisipasi Anda.`
         });
       }
 
