@@ -19,7 +19,11 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase client for direct relational table operations
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+  || process.env.SUPABASE_SERVICE_KEY
+  || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Use /tmp on Vercel (writable), fallback to local path in dev
@@ -1458,7 +1462,11 @@ export function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'a
   try {
     const { createClient } = require('@supabase/supabase-js');
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+      || process.env.SUPABASE_SERVICE_KEY
+      || '';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
     Object.entries(newConfig).forEach(([key, value]) => {
@@ -1921,7 +1929,11 @@ export async function resetMemberVotingStatus(identifier: string, adminEmail = '
   try {
     const { createClient } = require('@supabase/supabase-js');
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+      || process.env.SUPABASE_SERVICE_KEY
+      || '';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
     // Reset member status in Supabase
@@ -1992,7 +2004,11 @@ export async function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): Promis
   try {
     const { createClient } = require('@supabase/supabase-js');
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+    const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+      || process.env.SUPABASE_SERVICE_KEY
+      || '';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
     // Reset member status in Supabase - use a condition that matches all rows
@@ -2199,7 +2215,11 @@ export async function calculateResults(): Promise<DivisionResult[]> {
   // Load votes from Supabase
   const { createClient } = require('@supabase/supabase-js');
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
-  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY || '';
+  const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+    || process.env.SUPABASE_SERVICE_KEY
+    || '';
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   
   const { data: votesData, error: votesError } = await supabase.from('votes').select('*');

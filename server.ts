@@ -203,6 +203,39 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
       // Check current election config status
       const config = getConfig();
+      const now = new Date();
+      const votingStart = config.voting_start ? new Date(config.voting_start) : null;
+      const votingEnd = config.voting_end ? new Date(config.voting_end) : null;
+      if (config.voting_status === 'AKTIF' && votingStart && now < votingStart) {
+        addAuditLog({
+          user_email: cleanEmail,
+          user_role: 'ANGGOTA',
+          activity: 'LOGIN_DITOLAK_VOTING_BELUM_BUKA',
+          details: `Login ditolak: Pemilihan belum dibuka. Waktu mulai: ${config.voting_start}`,
+          ip_or_ua,
+          status: 'gagal'
+        });
+        return res.status(403).json({
+          success: false,
+          error_title: 'PEMILIHAN BELUM DIBUKA',
+          message: `Pemilihan akan dimulai pada ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeStyle: 'medium' }).format(votingStart)}. Silakan coba kembali setelah waktu pemilihan dimulai.`
+        });
+      }
+      if (config.voting_status === 'AKTIF' && votingEnd && now > votingEnd) {
+        addAuditLog({
+          user_email: cleanEmail,
+          user_role: 'ANGGOTA',
+          activity: 'LOGIN_DITOLAK_VOTING_SEUDAH_TUTUP',
+          details: `Login ditolak: Pemilihan sudah ditutup. Waktu tutup: ${config.voting_end}`,
+          ip_or_ua,
+          status: 'gagal'
+        });
+        return res.status(403).json({
+          success: false,
+          error_title: 'PEMILIHAN SUDAH DITUTUP',
+          message: 'Pemilihan telah berakhir. Terima kasih atas partisipasi Anda.'
+        });
+      }
 
       // Successful Member Login
       addAuditLog({
