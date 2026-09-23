@@ -593,6 +593,8 @@ export async function initializeDatabaseAsync(): Promise<void> {
       dbState = relationalData;
       // Generate fresh candidates from members
       syncCandidatesWithMembers();
+      // Sync ALL state (including config) to Supabase to ensure consistency
+      saveDatabaseToFile();
       // Sync candidates to Supabase
       try {
         const { syncCandidatesToSupabase } = await import('./database-service');
@@ -602,6 +604,7 @@ export async function initializeDatabaseAsync(): Promise<void> {
         console.error('[db] Failed to sync candidates:', err);
       }
       console.log(`[db] Loaded ${relationalData.members.length} members from relational tables.`);
+      console.log(`[db] Config synced to Supabase: voting_start=${dbState.config?.voting_start}, voting_end=${dbState.config?.voting_end}`);
       return;
     }
   } catch (err) {
