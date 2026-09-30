@@ -1194,13 +1194,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     res.json({ success: true, config });
   });
 
-  app.put('/api/admin/config', (req, res) => {
+  app.put('/api/admin/config', async (req, res) => {
     const { newConfig, adminEmail } = req.body;
     if (!newConfig) {
       return res.status(400).json({ success: false, message: 'Konfigurasi baru diperlukan.' });
     }
-    const updated = updateConfig(newConfig, adminEmail || 'admin');
-    res.json({ success: true, config: updated });
+    try {
+      const updated = await updateConfig(newConfig, adminEmail || 'admin');
+      res.json({ success: true, config: updated });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Gagal update konfigurasi' });
+    }
   });
 
   // Election Results with Tie-Break Detection (PRD Section 21 & 22)

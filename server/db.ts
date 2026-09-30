@@ -1455,13 +1455,13 @@ export function getConfig(): ElectionConfig {
   return db.config;
 }
 
-export function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'admin'): ElectionConfig {
+export async function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'admin'): Promise<ElectionConfig> {
   const db = getDatabase();
   db.config = { ...db.config, ...newConfig };
   syncDivisionStats();
   saveDatabaseToFile();
 
-  // Save config to Supabase relational table
+  // Save config to Supabase relational table with await
   try {
     const { createClient } = require('@supabase/supabase-js');
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
@@ -1470,12 +1470,15 @@ export function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'a
       || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
       || process.env.SUPABASE_SERVICE_KEY
       || '';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
-    Object.entries(newConfig).forEach(([key, value]) => {
-      supabase.from('config').upsert({ key, value: String(value) }, { onConflict: 'key' })
-        .catch(err => console.error(`[updateConfig] Error saving config ${key}:`, err));
-    });
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+      await Promise.all(
+        Object.entries(newConfig).map(([key, value]) =>
+          supabase.from('config').upsert({ key, value: String(value) }, { onConflict: 'key' })
+        )
+      );
+    }
   } catch (err) {
     console.error('[updateConfig] Failed to save config to Supabase:', err);
   }
