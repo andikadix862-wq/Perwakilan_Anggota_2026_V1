@@ -9,6 +9,7 @@ import {
   TestResultItem,
   VotingReceiptData
 } from '../types';
+import storage from '../lib/storage';
 
 export interface LoginResponse {
   success: boolean;
@@ -203,10 +204,10 @@ export const api = {
   },
 
   logoutAdmin(): void {
-    localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-    localStorage.removeItem('kopsyah_user');
-    localStorage.removeItem('kopsyah_token');
-    localStorage.removeItem('kopsyah_type');
+    storage.remove(ADMIN_AUTH_STORAGE_KEY);
+    storage.remove('kopsyah_user');
+    storage.remove('kopsyah_token');
+    storage.remove('kopsyah_type');
   },
 
   async verifyTransaction(transactionId: string): Promise<{ success: boolean; transaction_id: string; member_name: string; bagian: string; timestamp: string }> {
@@ -507,7 +508,7 @@ export const api = {
 // Local Backup Helpers for Import Wizard
 export function getLocalBackupMembers(): Partial<Member>[] {
   try {
-    const raw = localStorage.getItem('import_members_backup');
+    const raw = storage.get('import_members_backup');
     if (raw) return JSON.parse(raw);
   } catch {}
   return [];
@@ -515,10 +516,10 @@ export function getLocalBackupMembers(): Partial<Member>[] {
 
 export function saveLocalBackupMembers(members: Partial<Member>[]) {
   try {
-    localStorage.setItem('import_members_backup', JSON.stringify(members));
+    storage.set('import_members_backup', JSON.stringify(members));
   } catch {}
 }
 
 export function clearLocalBackupMembers() {
-  try { localStorage.removeItem('import_members_backup'); } catch {}
+  try { storage.remove('import_members_backup'); } catch {}
 }
