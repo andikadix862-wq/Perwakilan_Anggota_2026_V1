@@ -324,7 +324,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
             disabled={loadingStandings}
             className="px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-gray-500 {loadingStandings ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-gray-500 ${loadingStandings ? 'animate-spin' : ''}`} />
             <span>Perbarui Klasemen</span>
           </button>
         </div>
