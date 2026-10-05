@@ -550,12 +550,12 @@ export const AdminDivisions: React.FC<AdminDivisionsProps> = ({ adminEmail = 'ad
       {isModalOpen && (
         <div
           id="modal-division-backdrop"
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in pointer-events-auto"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto"
           onClick={handleCloseModal}
         >
           <div
             id="modal-division-dialog"
-            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in zoom-in-95 max-h-[90vh] flex flex-col pointer-events-auto"
+            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col pointer-events-auto"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
