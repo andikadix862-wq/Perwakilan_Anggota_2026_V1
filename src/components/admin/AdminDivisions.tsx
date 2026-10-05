@@ -158,7 +158,7 @@ export const AdminDivisions: React.FC<AdminDivisionsProps> = ({ adminEmail = 'ad
         old_bagian_id: modalMode === 'edit' && editingDivision ? editingDivision.bagian_id : undefined
       };
 
-      const res = await api.saveDivision(payload, adminEmail);
+      const res = await api.upsertDivision(payload, adminEmail);
       if (res.success) {
         showToast(res.message || 'Data bagian berhasil disimpan.');
         setIsModalOpen(false);
