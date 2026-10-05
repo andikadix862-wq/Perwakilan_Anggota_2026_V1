@@ -52,7 +52,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
   const [filterBagian, setFilterBagian] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterHakPilih, setFilterHakPilih] = useState('ALL');
-  const [filterPensiun, setFilterPensiun] = useState<'ALL' | 'WARNING' | 'PENGURUS_BPK' | 'PEGAWAI' | 'SAFE'>('ALL');
+  const [filterPensiun, setFilterPensiun] = useState<'ALL' | 'VOTED' | 'ELIGIBLE' | 'ONLY_VOTER'>('ALL');
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -276,42 +276,20 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
   };
 
   // Counts for qualifications
-  const totalPengurusBPK = members.filter(m => checkPengurusOrBPK(m.jabatan).isPengurusBPK).length;
-  const totalPegawai = members.filter(m => checkPegawai(m.jabatan)).length;
-  const totalWarningPensiun = members.filter(m => {
-    const isP = checkPengurusOrBPK(m.jabatan).isPengurusBPK;
-    const isPeg = checkPegawai(m.jabatan);
-    if (isP || isPeg) return false;
-    const p = calculateMemberPension(m.tanggal_lahir, m.tanggal_pensiun, undefined, m.jabatan);
-    return p.is_warning || m.is_pensiun_warning || (m.sisa_pensiun_tahun !== undefined && m.sisa_pensiun_tahun !== null && m.sisa_pensiun_tahun < 4);
-  }).length;
-  const totalLayakDicalonkan = members.filter(m => {
-    const isP = checkPengurusOrBPK(m.jabatan).isPengurusBPK;
-    const isPeg = checkPegawai(m.jabatan);
-    if (isP || isPeg) return false;
-    const p = calculateMemberPension(m.tanggal_lahir, m.tanggal_pensiun, undefined, m.jabatan);
-    const isWarn = p.is_warning || m.is_pensiun_warning || (m.sisa_pensiun_tahun !== undefined && m.sisa_pensiun_tahun !== null && m.sisa_pensiun_tahun < 4);
-    return !isWarn && m.status === 'AKTIF';
-  }).length;
+  const totalVoted = members.filter(m => m.status_memilih === 'SUDAH_MEMILIH').length;
+  const totalEligible = members.filter(m => m.hak_dipilih && m.status === 'AKTIF').length;
+  const totalOnlyVoter = members.filter(m => !m.hak_dipilih || !m.status || m.status !== 'AKTIF').length;
 
   // Filter members based on filterPensiun using real-time qualification calculation
   const filteredMembers = members.filter(m => {
-    const isP = checkPengurusOrBPK(m.jabatan).isPengurusBPK;
-    const isPeg = checkPegawai(m.jabatan);
-    const p = calculateMemberPension(m.tanggal_lahir, m.tanggal_pensiun, undefined, m.jabatan);
-    const isWarn = p.is_warning || m.is_pensiun_warning || (m.sisa_pensiun_tahun !== undefined && m.sisa_pensiun_tahun !== null && m.sisa_pensiun_tahun < 4);
-
-    if (filterPensiun === 'PENGURUS_BPK') {
-      return isP;
+    if (filterPensiun === 'VOTED') {
+      return m.status_memilih === 'SUDAH_MEMILIH';
     }
-    if (filterPensiun === 'PEGAWAI') {
-      return isPeg;
+    if (filterPensiun === 'ELIGIBLE') {
+      return m.hak_dipilih && m.status === 'AKTIF';
     }
-    if (filterPensiun === 'WARNING') {
-      return isWarn && !isP && !isPeg;
-    }
-    if (filterPensiun === 'SAFE') {
-      return !isWarn && !isP && !isPeg && m.status === 'AKTIF';
+    if (filterPensiun === 'ONLY_VOTER') {
+      return !m.hak_dipilih || !m.status || m.status !== 'AKTIF';
     }
     return true;
   });
@@ -463,12 +441,12 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
           </div>
         </form>
 
-        {/* Quick Filter Bar for Pension Warning & Categories */}
-        <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+        {/* Quick Filter Bar */}
+        <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold text-gray-500 mr-1 flex items-center gap-1">
               <Filter className="w-3 h-3 text-gray-400" />
-              Kualifikasi Hak Dipilih:
+              Filter:
             </span>
             <button
               type="button"
@@ -483,62 +461,50 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({ adminEmail, onNaviga
             </button>
             <button
               type="button"
-              onClick={() => setFilterPensiun('PENGURUS_BPK')}
+              onClick={() => setFilterPensiun('VOTED')}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                filterPensiun === 'PENGURUS_BPK'
-                  ? 'bg-purple-800 text-white font-bold'
-                  : totalPengurusBPK > 0
-                  ? 'bg-purple-50 text-purple-900 border border-purple-300 hover:bg-purple-100 font-bold'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <ShieldAlert className="w-3.5 h-3.5 text-purple-600" />
-              <span>Pengurus / BPK - Hanya Pemilih ({totalPengurusBPK})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterPensiun('PEGAWAI')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                filterPensiun === 'PEGAWAI'
-                  ? 'bg-rose-800 text-white font-bold'
-                  : totalPegawai > 0
-                  ? 'bg-rose-50 text-rose-900 border border-rose-300 hover:bg-rose-100 font-bold'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-              <span>Pegawai - Tidak Punya Hak Memilih ({totalPegawai})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterPensiun('WARNING')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                filterPensiun === 'WARNING'
-                  ? 'bg-amber-600 text-white font-bold'
-                  : totalWarningPensiun > 0
-                  ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 font-bold'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <AlertTriangle className="w-3 h-3 text-amber-500" />
-              <span>Sisa Pensiun &lt; 4 Thn ({totalWarningPensiun})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterPensiun('SAFE')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                filterPensiun === 'SAFE'
+                filterPensiun === 'VOTED'
                   ? 'bg-emerald-700 text-white font-bold'
+                  : totalVoted > 0
+                  ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 font-bold'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Layak Dicalonkan (≥ 4 Thn) ({totalLayakDicalonkan})</span>
+              <span>Ada Suara ({totalVoted})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterPensiun('ELIGIBLE')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                filterPensiun === 'ELIGIBLE'
+                  ? 'bg-blue-700 text-white font-bold'
+                  : totalEligible > 0
+                  ? 'bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100 font-bold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span>Berhak Dipilih ({totalEligible})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterPensiun('ONLY_VOTER')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                filterPensiun === 'ONLY_VOTER'
+                  ? 'bg-amber-600 text-white font-bold'
+                  : totalOnlyVoter > 0
+                  ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 font-bold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+              <span>Hanya Pemilih ({totalOnlyVoter})</span>
             </button>
           </div>
 
           <div className="text-[11px] text-gray-500 font-medium">
-            Usia Pensiun: <span className="font-bold text-gray-700">55 Thn</span> • Batas Hak Dipilih: <span className="font-bold text-amber-700">&ge; 4 Thn</span> • Pengurus &amp; BPK: <span className="font-bold text-purple-700">Hanya Pemilih</span>
+            Hak Dipilih: <span className="font-bold text-emerald-700">Aktif</span> • Hak Memilih: <span className="font-bold text-blue-700">Siap</span>
           </div>
         </div>
       </div>
