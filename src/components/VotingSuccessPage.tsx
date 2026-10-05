@@ -1,25 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  CheckCircle2,
-  FileCheck,
-  Printer,
-  ArrowRight,
-  ShieldCheck,
-  Lock,
-  Vote,
-  Calendar,
-  Building2,
-  UserCheck,
-  Download,
-  ExternalLink,
-  Trophy,
-  Award,
-  Users,
-  BarChart3,
-  TrendingUp,
-  Sparkles,
-  RefreshCw,
-  Crown
+  CheckCircle2,\
+  FileCheck,\
+  Printer,\
+  ArrowRight,\
+  ShieldCheck,\
+  Lock,\
+  Vote,\
+  Calendar,\
+  Building2,\
+  UserCheck,\
+  Download,\
+  ExternalLink,\
+  Trophy,\
+  Award,\
+  Users,\
+  BarChart3,\
+  TrendingUp,\
+  Sparkles,\
+  RefreshCw,\
+  Crown,\
+  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api, SubmitVoteResponse, VoterDashboardResponse } from '../services/api';
@@ -44,6 +45,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [printFeedback, setPrintFeedback] = useState<string | null>(null);
+  const [standingsError, setStandingsError] = useState<string | null>(null);
 
   // Standings / Leaderboard State
   const [divisionCandidates, setDivisionCandidates] = useState<Candidate[]>([]);
@@ -62,6 +64,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
       setDashboardData(dashRes);
     } catch (err) {
       console.warn('Gagal memuat klasemen bagian:', err);
+      setStandingsError(err instanceof Error ? err.message : 'Gagal memuat data klasemen');
     } finally {
       setLoadingStandings(false);
     }
@@ -389,6 +392,19 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
             <div className="py-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-blue-800" />
               <span>Memuat klasemen suara...</span>
+            </div>
+          ) : standingsError ? (
+            <div className="p-6 text-center text-xs text-rose-600 bg-rose-50 rounded-xl border border-rose-200">
+              <AlertCircle className="w-5 h-5 mx-auto mb-2 text-rose-500" />
+              <p className="font-bold">Gagal Memuat Klasemen</p>
+              <p className="mt-1">{standingsError}</p>
+              <button
+                type="button"
+                onClick={fetchDivisionStandings}
+                className="mt-3 px-3 py-1.5 bg-rose-600 text-white text-xs font-bold rounded-lg hover:bg-rose-700"
+              >
+                Coba Lagi
+              </button>
             </div>
           ) : sortedCandidates.length === 0 ? (
             <div className="p-6 text-center text-xs text-gray-500 bg-gray-50 rounded-xl border border-gray-200">
