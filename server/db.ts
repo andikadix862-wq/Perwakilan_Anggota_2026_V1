@@ -684,6 +684,8 @@ export function syncCandidatesWithMembers(): void {
         candidateReason = 'Status anggota tidak aktif';
       } else if (isPengurusOrBpk.isPengurusBPK) {
         candidateReason = `Tidak dapat dipilih (Menjabat sebagai ${isPengurusOrBpk.label}). Sesuai aturan AD/ART, berstatus Hanya Pemilih.`;
+      } else if (enriched.is_pegawai) {
+        candidateReason = 'Pegawai/Karyawan - Hanya Memiliki Hak Memilih';
       } else if (enriched.is_pensiun_warning) {
         candidateReason = `Tidak dapat dipilih (Sisa masa pensiun ${enriched.sisa_pensiun_text || `${enriched.sisa_pensiun_tahun} thn`} < 4 tahun). Berstatus Hanya Pemilih.`;
       } else {
@@ -718,8 +720,7 @@ export function syncCandidatesWithMembers(): void {
         jabatan: m.jabatan || 'Anggota',
         is_pengurus_bpk: isPengurusOrBpk.isPengurusBPK,
         tipe_pengurus_bpk: isPengurusOrBpk.roleType,
-        is_pegawai: enriched.is_pegawai,
-        tipe_pengurus_bpk: isPengurusOrBpk.roleType
+        is_pegawai: enriched.is_pegawai
       };
 
       newCandidates.push(candidate);
