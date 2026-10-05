@@ -890,11 +890,15 @@ export const VotingPage: React.FC<VotingPageProps> = ({
                         <p className="font-bold text-amber-900">
                           {cand.is_pengurus_bpk
                             ? `Tidak dapat dipilih (${cand.tipe_pengurus_bpk || 'Pengurus/BPK'} - Hanya Pemilih)`
+                            : cand.is_pegawai
+                            ? 'Tidak dapat dipilih (Pegawai/Karyawan - Hanya Pemilih)'
                             : 'Tidak dapat dipilih (Sisa Masa Pensiun < 4 tahun)'}
                         </p>
                         <p className="text-[11px] text-amber-800/95 leading-relaxed">
                           {cand.is_pengurus_bpk
                             ? 'Menjabat sebagai Pengurus atau BPK koperasi, sesuai AD/ART hanya memiliki Hak Memilih dan tidak dapat dicalonkan sebagai perwakilan.'
+                            : cand.is_pegawai
+                            ? 'Terdaftar sebagai Pegawai/Karyawan, sesuai AD/ART hanya memiliki Hak Memilih dan tidak dapat dicalonkan sebagai perwakilan.'
                             : 'Anggota hanya status Pemilih, sesuai dengan ketentuan AD/ART sisa masa dinas minimal 4 tahun.'}
                         </p>
                       </div>
@@ -946,6 +950,8 @@ export const VotingPage: React.FC<VotingPageProps> = ({
                       <span>
                         {cand.is_pengurus_bpk
                           ? 'TIDAK DAPAT DIPILIH (PENGURUS / BPK)'
+                          : cand.is_pegawai
+                          ? 'TIDAK DAPAT DIPILIH (PEGAWAI)'
                           : 'TIDAK DAPAT DIPILIH (PENSIUN < 4 THN)'}
                       </span>
                     </button>
