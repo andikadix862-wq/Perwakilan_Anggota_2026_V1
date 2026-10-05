@@ -38,9 +38,29 @@ export async function getAllMembers(): Promise<Member[]> {
 }
 
 export async function getMemberByEmail(email: string): Promise<Member | null> {
-  const { data, error } = await supabase.from('members').select('*').eq('email', email.toLowerCase()).single();
-  if (error) return null;
-  return data as Member;
+  const memberEmail = email.toLowerCase();
+
+  // Fetch member from members table
+  const { data: member, error: memberError } = await supabase
+    .from('members')
+    .select('*')
+    .eq('email', memberEmail)
+    .single();
+
+  if (memberError || !member) return null;
+
+  // Join with divisions to get correct nama_bagian
+  const { data: division, error: divError } = await supabase
+    .from('divisions')
+    .select('nama_bagian')
+    .eq('bagian_id', member.bagian_id)
+    .single();
+
+  if (!divError && division) {
+    return { ...member, nama_bagian: division.nama_bagian } as Member;
+  }
+
+  return member as Member;
 }
 
 export async function upsertMember(member: Member): Promise<void> {
