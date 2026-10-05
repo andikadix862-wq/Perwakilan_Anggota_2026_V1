@@ -37,6 +37,7 @@ import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
 import { AdminTestRunner } from './components/admin/AdminTestRunner';
 
 import { api, SubmitVoteResponse, setStoredAdminAuth } from './services/api';
+import storage from './lib/storage';
 import { Member, AdminUser, ElectionConfig } from './types';
 import { testFirestoreConnection } from './lib/firebase';
 
@@ -106,9 +107,9 @@ export function App() {
 
     // Check stored session and URL routing
     try {
-      const savedUser = localStorage.getItem('kopsyah_user');
-      const savedType = localStorage.getItem('kopsyah_type') as 'member' | 'admin' | null;
-      const savedToken = localStorage.getItem('kopsyah_token');
+      const savedUser = storage.get('kopsyah_user');
+      const savedType = storage.get('kopsyah_type') as 'member' | 'admin' | null;
+      const savedToken = storage.get('kopsyah_token');
       if (savedUser && savedType && savedToken) {
         const parsed = JSON.parse(savedUser);
         setCurrentUser(parsed);
@@ -141,7 +142,7 @@ export function App() {
         search.includes('admin');
 
       if (isAdminRoute) {
-        const savedType = localStorage.getItem('kopsyah_type');
+        const savedType = storage.get('kopsyah_type');
         if (savedType === 'admin') {
           setCurrentView('admin-portal');
         } else {
@@ -164,9 +165,9 @@ export function App() {
     setCurrentUser(user);
     setUserType(type);
     setToken(sessionToken);
-    localStorage.setItem('kopsyah_user', JSON.stringify(user));
-    localStorage.setItem('kopsyah_type', type);
-    localStorage.setItem('kopsyah_token', sessionToken);
+    storage.set('kopsyah_user', JSON.stringify(user));
+    storage.set('kopsyah_type', type);
+    storage.set('kopsyah_token', sessionToken);
 
     if (type === 'admin') {
       setStoredAdminAuth({
@@ -186,9 +187,9 @@ export function App() {
     setCurrentUser(null);
     setUserType(null);
     setToken(null);
-    localStorage.removeItem('kopsyah_user');
-    localStorage.removeItem('kopsyah_type');
-    localStorage.removeItem('kopsyah_token');
+    storage.remove('kopsyah_user');
+    storage.remove('kopsyah_type');
+    storage.remove('kopsyah_token');
     setStoredAdminAuth(null);
     api.logoutAdmin();
     // Force reload to ensure clean state
@@ -214,7 +215,7 @@ export function App() {
         voted_at: result.timestamp
       };
       setCurrentUser(updatedMember);
-      localStorage.setItem('kopsyah_user', JSON.stringify(updatedMember));
+      storage.set('kopsyah_user', JSON.stringify(updatedMember));
     }
     setCurrentView('voting-success');
   };

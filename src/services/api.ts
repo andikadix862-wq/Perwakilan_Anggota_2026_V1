@@ -85,7 +85,7 @@ export async function handleJsonResponse<T = any>(res: Response): Promise<T> {
 
 export function getStoredAdminAuth(): AdminAuthState | null {
   try {
-    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+    const raw = storage.get(ADMIN_AUTH_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.email) return parsed;
@@ -96,9 +96,9 @@ export function getStoredAdminAuth(): AdminAuthState | null {
 
   // Also read from kopsyah_user, kopsyah_token, kopsyah_type in current session
   try {
-    const userRaw = localStorage.getItem('kopsyah_user');
-    const token = localStorage.getItem('kopsyah_token');
-    const type = localStorage.getItem('kopsyah_type');
+    const userRaw = storage.get('kopsyah_user');
+    const token = storage.get('kopsyah_token');
+    const type = storage.get('kopsyah_type');
     if (userRaw) {
       const u = JSON.parse(userRaw);
       if (
@@ -126,16 +126,16 @@ export function getStoredAdminAuth(): AdminAuthState | null {
 
 export function setStoredAdminAuth(auth: AdminAuthState | null): void {
   if (!auth) {
-    localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-    localStorage.removeItem('kopsyah_user');
-    localStorage.removeItem('kopsyah_token');
-    localStorage.removeItem('kopsyah_type');
+    storage.remove(ADMIN_AUTH_STORAGE_KEY);
+    storage.remove('kopsyah_user');
+    storage.remove('kopsyah_token');
+    storage.remove('kopsyah_type');
     return;
   }
-  localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify(auth));
-  localStorage.setItem('kopsyah_user', JSON.stringify({ email: auth.email, nama: auth.nama, role: auth.role }));
-  localStorage.setItem('kopsyah_token', auth.token);
-  localStorage.setItem('kopsyah_type', auth.role === 'SUPER_ADMIN' ? 'admin' : 'admin');
+  storage.set(ADMIN_AUTH_STORAGE_KEY, JSON.stringify(auth));
+  storage.set('kopsyah_user', JSON.stringify({ email: auth.email, nama: auth.nama, role: auth.role }));
+  storage.set('kopsyah_token', auth.token);
+  storage.set('kopsyah_type', auth.role === 'SUPER_ADMIN' ? 'admin' : 'admin');
 }
 
 function getAdminRequestHeaders(adminEmail?: string): Record<string, string> {
