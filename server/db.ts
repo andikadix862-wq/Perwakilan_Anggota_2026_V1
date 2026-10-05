@@ -717,6 +717,8 @@ export function syncCandidatesWithMembers(): void {
         usia: enriched.usia,
         jabatan: m.jabatan || 'Anggota',
         is_pengurus_bpk: isPengurusOrBpk.isPengurusBPK,
+        tipe_pengurus_bpk: isPengurusOrBpk.roleType,
+        is_pegawai: enriched.is_pegawai,
         tipe_pengurus_bpk: isPengurusOrBpk.roleType
       };
 
