@@ -139,15 +139,15 @@ export async function getCandidatesByDivision(bagian_id?: string): Promise<Candi
   const { getDatabase, syncCandidatesWithMembers } = await import('./db');
   const db = getDatabase();
   syncCandidatesWithMembers();
-  
-  // Filter by division and eligible status from fresh data
+
+  // Filter by division only - show ALL candidates including ineligible ones
+  // Frontend will handle disabled state for ineligible candidates
   let candidates = db.candidates || [];
   if (bagian_id) {
     candidates = candidates.filter(c => c.bagian_id === bagian_id);
   }
-  // FILTER: Only eligible candidates (memenuhi_syarat = true)
-  candidates = candidates.filter(c => c.memenuhi_syarat === true);
-  
+  // REMOVED: Filter out ineligible candidates - show all with disabled state
+
   return candidates as Candidate[];
 }
 
