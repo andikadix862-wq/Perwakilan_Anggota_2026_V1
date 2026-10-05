@@ -1,25 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import {
-  CheckCircle2,\
-  FileCheck,\
-  Printer,\
-  ArrowRight,\
-  ShieldCheck,\
-  Lock,\
-  Vote,\
-  Calendar,\
-  Building2,\
-  UserCheck,\
-  Download,\
-  ExternalLink,\
-  Trophy,\
-  Award,\
-  Users,\
-  BarChart3,\
-  TrendingUp,\
-  Sparkles,\
-  RefreshCw,\
-  Crown,\
+  CheckCircle2,
+  FileCheck,
+  Printer,
+  ArrowRight,
+  ShieldCheck,
+  Lock,
+  Vote,
+  Calendar,
+  Building2,
+  UserCheck,
+  Download,
+  ExternalLink,
+  Trophy,
+  Award,
+  Users,
+  BarChart3,
+  TrendingUp,
+  Sparkles,
+  RefreshCw,
+  Crown,
   AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -45,6 +45,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [printFeedback, setPrintFeedback] = useState<string | null>(null);
+  const [standingsError, setStandingsError] = useState<string | null>(null);
 
   // Standings / Leaderboard State
   const [divisionCandidates, setDivisionCandidates] = useState<Candidate[]>([]);
@@ -85,7 +86,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
     return a.nomor_urut - b.nomor_urut;
   });
 
-  const txId = voteResult?.transaction_id || member.transaction_id || `TX-YKK-{Date.now()}`;
+  const txId = voteResult?.transaction_id || member.transaction_id || `TX-YKK-${Date.now()}`;
   const timestamp = voteResult?.timestamp || member.voted_at || new Date().toISOString();
   const namaBagian = voteResult?.nama_bagian || member.nama_bagian;
 
@@ -343,7 +344,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
             disabled={loadingStandings}
             className="px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-gray-500 {loadingStandings ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-gray-500 ${loadingStandings ? 'animate-spin' : ''}`} />
             <span>Perbarui Klasemen</span>
           </button>
         </div>
@@ -356,7 +357,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
               Progres Keterisian Kuota Kursi Bagian {namaBagian}
             </span>
             <span className="bg-amber-400 text-slate-900 px-2.5 py-0.5 rounded font-black text-[11px] uppercase tracking-wider">
-              {totalSuaraDivisi > 0 ? `1 dari {kuotaKursi} Kursi Terisi Suara Sah` : `0 dari ${kuotaKursi} Kursi Terisi`}
+              {totalSuaraDivisi > 0 ? `1 dari ${kuotaKursi} Kursi Terisi Suara Sah` : `0 dari ${kuotaKursi} Kursi Terisi`}
             </span>
           </div>
 
@@ -364,7 +365,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
             <div
               className="bg-amber-400 h-2.5 rounded-full transition-all duration-500"
               style={{
-                width: `{Math.min(
+                width: `${Math.min(
                   100,
                   totalAnggotaBagian > 0
                     ? Math.round((totalSuaraDivisi / totalAnggotaBagian) * 100)
@@ -388,10 +389,6 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
           </h3>
 
           {loadingStandings ? (
-            <div className="py-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-800" />
-              <span>Memuat klasemen suara...</span>
-            </div>
           ) : standingsError ? (
             <div className="p-6 text-center text-xs text-rose-600 bg-rose-50 rounded-xl border border-rose-200">
               <AlertCircle className="w-5 h-5 mx-auto mb-2 text-rose-500" />
@@ -404,6 +401,11 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
               >
                 Coba Lagi
               </button>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-blue-800" />
+              <span>Memuat klasemen suara...</span>
             </div>
           ) : sortedCandidates.length === 0 ? (
             <div className="p-6 text-center text-xs text-gray-500 bg-gray-50 rounded-xl border border-gray-200">
@@ -423,7 +425,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
                 return (
                   <div
                     key={cand.kandidat_id}
-                    className={`p-4 rounded-xl border transition-all flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 {
+                    className={`p-4 rounded-xl border transition-all flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 ${
                       isLeading
                         ? 'bg-amber-50/80 border-amber-300 ring-1 ring-amber-200 shadow-2xs'
                         : isPotentiallyElected
@@ -433,7 +435,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Rank badge */}
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 {
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
                         rank === 1 && votes > 0
                           ? 'bg-amber-400 text-slate-900 shadow-2xs'
                           : rank <= kuotaKursi
@@ -466,7 +468,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
                             {cand.nama}
                           </span>
                           <span className="px-1.5 py-0.2 rounded bg-gray-100 text-gray-700 font-mono text-[10px] font-bold">
-                            No. Urut {cand.nomor_urut < 10 ? `0{cand.nomor_urut}` : cand.nomor_urut}
+                            No. Urut {cand.nomor_urut < 10 ? `0${cand.nomor_urut}` : cand.nomor_urut}
                           </span>
                           {isLeading && (
                             <span id="badge-suara-terbanyak" className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-2xs">
