@@ -256,9 +256,6 @@ export const AdminMonitoring: React.FC<AdminMonitoringProps> = ({ adminEmail = '
               <div key={div.bagian_id} className="p-3.5 rounded-xl bg-gray-50 border border-gray-200">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-white text-gray-900 font-mono font-bold border border-gray-200">
-                      {div.bagian_id}
-                    </span>
                     <span className="font-bold text-gray-900">{div.nama_bagian}</span>
                     <span className="text-gray-500 text-[11px]">
                       ({div.kuota_perwakilan} Kursi)

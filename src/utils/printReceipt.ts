@@ -353,7 +353,7 @@ export function generateReceiptHtml(data: VotingReceiptData): string {
         </tr>
         <tr>
           <td class="label">Bagian / Divisi Perwakilan</td>
-          <td class="value">${data.nama_bagian} (${data.bagian_id})</td>
+          <td class="value">${data.nama_bagian}</td>
         </tr>
         <tr>
           <td class="label">Waktu Pemungutan Suara</td>

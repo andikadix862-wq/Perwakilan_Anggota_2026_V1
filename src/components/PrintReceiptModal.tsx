@@ -167,7 +167,7 @@ export const PrintReceiptModal: React.FC<PrintReceiptModalProps> = ({
                   Bagian / Divisi
                 </span>
                 <span className="font-bold text-gray-900">
-                  {receipt.nama_bagian} ({receipt.bagian_id})
+                  {receipt.nama_bagian}
                 </span>
               </div>
             </div>
