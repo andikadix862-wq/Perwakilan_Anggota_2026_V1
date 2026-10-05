@@ -25,6 +25,7 @@ export const VotingSuccessPage: React.FC<VotingSuccessPageProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [printFeedback, setPrintFeedback] = useState<string | null>(null);
+  const [standingsError, setStandingsError] = useState<string | null>(null);
 
   // Standings / Leaderboard State
   const [divisionCandidates, setDivisionCandidates] = useState<Candidate[]>([]);
