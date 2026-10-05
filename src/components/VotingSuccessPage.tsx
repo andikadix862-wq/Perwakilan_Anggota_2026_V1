@@ -1,26 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  CheckCircle2,\
-  FileCheck,\
-  Printer,\
-  ArrowRight,\
-  ShieldCheck,\
-  Lock,\
-  Vote,\
-  Calendar,\
-  Building2,\
-  UserCheck,\
-  Download,\
-  ExternalLink,\
-  Trophy,\
-  Award,\
-  Users,\
-  BarChart3,\
-  TrendingUp,\
-  Sparkles,\
-  RefreshCw,\
-  Crown,\
-  AlertCircle
+  CheckCircle2,  FileCheck,  Printer,  ArrowRight,  ShieldCheck,  Lock,  Vote,  Calendar,  Building2,  UserCheck,  Download,  ExternalLink,  Trophy,  Award,  Users,  BarChart3,  TrendingUp,  Sparkles,  RefreshCw,  Crown,  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api, SubmitVoteResponse, VoterDashboardResponse } from '../services/api';
