@@ -1194,7 +1194,7 @@ export interface UpsertDivisionInput {
   old_bagian_id?: string;
 }
 
-export function upsertDivision(
+export async function upsertDivision(
   data: UpsertDivisionInput,
   adminEmail = 'admin@kopsyah-ykk.id'
 ): { success: boolean; division: Division; message: string } {
@@ -1287,6 +1287,34 @@ export function upsertDivision(
     db.divisions[existingIndex] = updatedDivision;
     syncDivisionStats();
     saveDatabaseToFile();
+
+    // Also persist to relational divisions table
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
+      const SUPABASE_KEY = process.env.VITE_SUPABASE_SUPABASE_SERVICE_ROLE_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY
+        || process.env.VITE_SUPABASE_SUPABASE_SECRET_KEY
+        || process.env.SUPABASE_SERVICE_KEY
+        || '';
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+        await sb.from('divisions').upsert({
+          bagian_id: cleanId,
+          nama_bagian: cleanNama,
+          deskripsi: data.deskripsi || '',
+          total_anggota: count,
+          kuota_perwakilan: kuota,
+          sudah_memilih: sudah,
+          belum_memilih: belum,
+          partisipasi_persen: partisipasi,
+          manual_kuota: manualKuotaVal,
+          alasan_manual_kuota: data.alasan_manual_kuota || ''
+        }, { onConflict: 'bagian_id' });
+      }
+    } catch (err) {
+      console.error('[upsertDivision] Failed to sync divisions table:', err);
+    }
 
     addAuditLog({
       user_email: adminEmail,

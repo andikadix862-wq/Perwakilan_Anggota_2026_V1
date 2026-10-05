@@ -1105,11 +1105,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Create or Update Division (Manual Management)
-  app.post('/api/admin/divisions', (req, res) => {
+  app.post('/api/admin/divisions', async (req, res) => {
     try {
       const adminEmail = (req.headers['x-admin-email'] as string) || req.body.adminEmail || 'admin@kopsyah-ykk.id';
       const { bagian_id, nama_bagian, deskripsi, manual_kuota, alasan_manual_kuota, old_bagian_id } = req.body;
-      const result = upsertDivision(
+      const result = await upsertDivision(
         { bagian_id, nama_bagian, deskripsi, manual_kuota, alasan_manual_kuota, old_bagian_id },
         adminEmail
       );
@@ -1120,12 +1120,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Update existing Division
-  app.put('/api/admin/divisions/:id', (req, res) => {
+  app.put('/api/admin/divisions/:id', async (req, res) => {
     try {
       const adminEmail = (req.headers['x-admin-email'] as string) || req.body.adminEmail || 'admin@kopsyah-ykk.id';
       const old_bagian_id = req.params.id;
       const { bagian_id, nama_bagian, deskripsi, manual_kuota, alasan_manual_kuota } = req.body;
-      const result = upsertDivision(
+      const result = await upsertDivision(
         { bagian_id: bagian_id || old_bagian_id, nama_bagian, deskripsi, manual_kuota, alasan_manual_kuota, old_bagian_id },
         adminEmail
       );
