@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { Member, Division, Candidate, ElectionConfig, VoteRecord, AdminUser, DashboardStats } from '../src/types';
+import { enrichMemberPension, checkPegawai } from './db';
 
 // Use server-side environment variables (no VITE_ prefix for service role key)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_SUPABASE_URL || '';
@@ -44,10 +45,24 @@ export async function getAllMembers(): Promise<Member[]> {
   }
 
   // Override stale nama_bagian where division has a current name
-  return members.map(m => ({
-    ...m,
-    nama_bagian: nameMap[m.bagian_id] || m.nama_bagian
-  }));
+  // Also enrich with pension/qualification calculations
+  return members.map(m => {
+    const enriched = enrichMemberPension(m);
+    return {
+      ...m,
+      nama_bagian: nameMap[m.bagian_id] || m.nama_bagian,
+      // Override with computed qualification status
+      hak_dipilih: enriched.hak_dipilih,
+      hak_pilih: enriched.hak_pilih,
+      is_pensiun_warning: enriched.is_pensiun_warning,
+      sisa_pensiun_tahun: enriched.sisa_pensiun_tahun,
+      sisa_pensiun_text: enriched.sisa_pensiun_text,
+      alasan_hak_dipilih: enriched.alasan_hak_dipilih,
+      is_pengurus_bpk: enriched.is_pengurus_bpk,
+      is_pegawai: enriched.is_pegawai,
+      tipe_pengurus_bpk: enriched.tipe_pengurus_bpk
+    };
+  });
 }
 
 export async function getMemberByEmail(email: string): Promise<Member | null> {
@@ -69,11 +84,24 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
     .eq('bagian_id', member.bagian_id)
     .single();
 
-  if (!divError && division) {
-    return { ...member, nama_bagian: division.nama_bagian } as Member;
-  }
+  // Enrich member with pension/qualification calculations
+  const enriched = enrichMemberPension(member);
+  const result = {
+    ...member,
+    nama_bagian: (!divError && division) ? division.nama_bagian : member.nama_bagian,
+    // Override with computed qualification status
+    hak_dipilih: enriched.hak_dipilih,
+    hak_pilih: enriched.hak_pilih,
+    is_pensiun_warning: enriched.is_pensiun_warning,
+    sisa_pensiun_tahun: enriched.sisa_pensiun_tahun,
+    sisa_pensiun_text: enriched.sisa_pensiun_text,
+    alasan_hak_dipilih: enriched.alasan_hak_dipilih,
+    is_pengurus_bpk: enriched.is_pengurus_bpk,
+    is_pegawai: enriched.is_pegawai,
+    tipe_pengurus_bpk: enriched.tipe_pengurus_bpk
+  };
 
-  return member as Member;
+  return result as Member;
 }
 
 export async function upsertMember(member: Member): Promise<void> {
