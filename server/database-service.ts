@@ -34,7 +34,20 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 export async function getAllMembers(): Promise<Member[]> {
   const { data, error } = await supabase.from('members').select('*');
   if (error) throw error;
-  return (data || []) as Member[];
+  const members = (data || []) as Member[];
+
+  // Fetch all divisions to join fresh nama_bagian (avoid stale member.nama_bagian)
+  const { data: divisions } = await supabase.from('divisions').select('bagian_id, nama_bagian');
+  const nameMap: Record<string, string> = {};
+  for (const d of divisions || []) {
+    nameMap[d.bagian_id] = d.nama_bagian;
+  }
+
+  // Override stale nama_bagian where division has a current name
+  return members.map(m => ({
+    ...m,
+    nama_bagian: nameMap[m.bagian_id] || m.nama_bagian
+  }));
 }
 
 export async function getMemberByEmail(email: string): Promise<Member | null> {
