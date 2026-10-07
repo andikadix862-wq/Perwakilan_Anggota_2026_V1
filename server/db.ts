@@ -973,6 +973,19 @@ export function checkPengurusOrBPK(jabatan?: string | null): PengurusBPKCheckSer
     };
   }
 
+  // DPS: Dewan Pengawas Syariah
+  if (
+    upper === 'DPS' ||
+    upper.includes('Dewan Pengawas Syariah') ||
+    upper.includes('PENGAWAS SYARIAH')
+  ) {
+    return {
+      isPengurusBPK: true,
+      roleType: 'DPS',
+      label: 'Dewan Pengawas Syariah (DPS)'
+    };
+  }
+
   return { isPengurusBPK: false, roleType: null, label: '' };
 }
 
