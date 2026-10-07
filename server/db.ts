@@ -794,7 +794,8 @@ export function syncDivisionStats(): void {
 
 // ----------------- PENSION & RETIREMENT UTILITIES -----------------
 
-export const RETIREMENT_AGE = 55;
+// Usia pensiun: 54 tahun + 1 hari dari tanggal lahir
+export const RETIREMENT_AGE = 54;
 export const PENSION_WARNING_THRESHOLD_YEARS = 4;
 
 export function parseDateToISO(input: any): string | null {
@@ -1002,10 +1003,15 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
   if (tanggal_lahir) {
     const dob = new Date(`${tanggal_lahir}T00:00:00`);
     if (!isNaN(dob.getTime())) {
+      // Tanggal pensiun: 54 tahun + 1 hari dari tanggal lahir
       const pYear = dob.getFullYear() + RETIREMENT_AGE;
       const pMonth = String(dob.getMonth() + 1).padStart(2, '0');
       const pDay = String(dob.getDate()).padStart(2, '0');
-      tanggal_pensiun = `${pYear}-${pMonth}-${pDay}`;
+      // Tambah 1 hari dari tanggal lahir
+      const pensiunDate = new Date(dob);
+      pensiunDate.setFullYear(pYear);
+      pensiunDate.setDate(pensiunDate.getDate() + 1);
+      tanggal_pensiun = `${pensiunDate.getFullYear()}-${String(pensiunDate.getMonth() + 1).padStart(2, '0')}-${String(pensiunDate.getDate()).padStart(2, '0')}`;
 
       const pDate = new Date(`${tanggal_pensiun}T00:00:00`);
       const diff = getExactPensionDiffServer(validRefDate, pDate);
@@ -1129,6 +1135,7 @@ export function applyMemberQualificationLock(member: Member): Member {
     if (!isNaN(dob.getTime())) {
       const pensiunDate = new Date(dob);
       pensiunDate.setFullYear(pensiunDate.getFullYear() + RETIREMENT_AGE);
+      pensiunDate.setDate(pensiunDate.getDate() + 1); // +1 hari dari tanggal lahir
       const now = new Date();
       const diffYears = (pensiunDate.getTime() - now.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
       is_pensiun_warning = diffYears < 4;
@@ -1732,10 +1739,11 @@ export function upsertMembers(
       if (tglLahir) {
         const dob = new Date(`${tglLahir}T00:00:00`);
         if (!isNaN(dob.getTime())) {
-          const pYear = dob.getFullYear() + RETIREMENT_AGE;
-          const pMonth = String(dob.getMonth() + 1).padStart(2, '0');
-          const pDay = String(dob.getDate()).padStart(2, '0');
-          tglPensiun = `${pYear}-${pMonth}-${pDay}`;
+          // Tanggal pensiun: 54 tahun + 1 hari dari tanggal lahir
+          const pensiunDate = new Date(dob);
+          pensiunDate.setFullYear(pensiunDate.getFullYear() + RETIREMENT_AGE);
+          pensiunDate.setDate(pensiunDate.getDate() + 1);
+          tglPensiun = `${pensiunDate.getFullYear()}-${String(pensiunDate.getMonth() + 1).padStart(2, '0')}-${String(pensiunDate.getDate()).padStart(2, '0')}`;
         }
       }
 
@@ -1763,10 +1771,11 @@ export function upsertMembers(
       if (tglLahir) {
         const dob = new Date(`${tglLahir}T00:00:00`);
         if (!isNaN(dob.getTime())) {
-          const pYear = dob.getFullYear() + RETIREMENT_AGE;
-          const pMonth = String(dob.getMonth() + 1).padStart(2, '0');
-          const pDay = String(dob.getDate()).padStart(2, '0');
-          tglPensiun = `${pYear}-${pMonth}-${pDay}`;
+          // Tanggal pensiun: 54 tahun + 1 hari dari tanggal lahir
+          const pensiunDate = new Date(dob);
+          pensiunDate.setFullYear(pensiunDate.getFullYear() + RETIREMENT_AGE);
+          pensiunDate.setDate(pensiunDate.getDate() + 1);
+          tglPensiun = `${pensiunDate.getFullYear()}-${String(pensiunDate.getMonth() + 1).padStart(2, '0')}-${String(pensiunDate.getDate()).padStart(2, '0')}`;
         }
       }
 
