@@ -1002,6 +1002,27 @@ export function checkPegawai(jabatan?: string | null): boolean {
   );
 }
 
+/**
+ * Check if jabatan is DPS (Dewan Pengawas Syariah)
+ * Returns roleType and label if matched
+ */
+export function checkDPS(jabatan?: string | null): { isDPS: boolean; roleType: string | null; label: string } {
+  if (!jabatan) return { isDPS: false, roleType: null, label: '' };
+  const upper = String(jabatan).trim().toUpperCase();
+  if (
+    upper === 'DPS' ||
+    upper.includes('DEWAN PENGAWAS SYARIAH') ||
+    upper.includes('PENGAWAS SYARIAH')
+  ) {
+    return {
+      isDPS: true,
+      roleType: 'DPS',
+      label: 'Dewan Pengawas Syariah (DPS)'
+    };
+  }
+  return { isDPS: false, roleType: null, label: '' };
+}
+
 export function enrichMemberPension(member: Member, refDateInput?: string | Date): Member {
   const refDate = refDateInput ? new Date(refDateInput) : new Date();
   const validRefDate = isNaN(refDate.getTime()) ? new Date() : refDate;
@@ -1050,16 +1071,17 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
     }
   }
 
-  // ATURAN KUALIFIKASI BARU: PENGURUS, BPK & PEGAWAI
-  // - Pengurus, BPK, dan Pegawai/Karyawan HANYA memiliki Hak Memilih (Hak Pilih), tidak memiliki Hak Dipilih.
+  // ATURAN KUALIFIKASI BARU: PENGURUS, BPK, DPS & PEGAWAI
+  // - Pengurus, BPK, DPS, dan Pegawai/Karyawan HANYA memiliki Hak Memilih (Hak Pilih), tidak memiliki Hak Dipilih.
   const pengurusCheck = checkPengurusOrBPK(member.jabatan);
   const isPegawai = checkPegawai(member.jabatan);
+  const dpsCheck = checkDPS(member.jabatan);
 
   // Hak Memilih (Hak Pilih): AKTIF untuk Pegawai, Pengurus, BPK, dan Anggota Aktif
   const hak_pilih = member.status === 'AKTIF' ? (member.hak_pilih !== false) : false;
 
-  // Hak Dipilih: NONAKTIF jika Pegawai/Karyawan, Pengurus/BPK, atau sisa masa pensiun < 4 tahun
-  const hak_dipilih = member.status === 'AKTIF' && !isPegawai && !pengurusCheck.isPengurusBPK && !is_pensiun_warning;
+  // Hak Dipilih: NONAKTIF jika Pegawai/Karyawan, Pengurus/BPK/DPS, atau sisa masa pensiun < 4 tahun
+  const hak_dipilih = member.status === 'AKTIF' && !isPegawai && !pengurusCheck.isPengurusBPK && !dpsCheck.isDPS && !is_pensiun_warning;
 
   let alasan_hak_dipilih = '';
   if (member.status !== 'AKTIF') {
@@ -1068,6 +1090,8 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
     alasan_hak_dipilih = 'Terdaftar sebagai Pegawai/Karyawan KOPSYAH YKK. Berdasarkan aturan kualifikasi AD/ART, Pegawai/Karyawan hanya memiliki Hak Memilih (Hak Pilih) dan tidak memiliki Hak Dipilih sebagai Perwakilan Anggota (Hanya Pemilih).';
   } else if (pengurusCheck.isPengurusBPK) {
     alasan_hak_dipilih = `Menjabat sebagai ${pengurusCheck.label}. Berdasarkan aturan kualifikasi AD/ART, Pengurus dan BPK hanya memiliki Hak Memilih (Hak Pilih) dan tidak memiliki Hak Dipilih sebagai Perwakilan Anggota (Hanya Pemilih).`;
+  } else if (dpsCheck.isDPS) {
+    alasan_hak_dipilih = `Menjabat sebagai ${dpsCheck.label}. Berdasarkan aturan kualifikasi AD/ART, DPS hanya memiliki Hak Memilih (Hak Pilih) dan tidak memiliki Hak Dipilih sebagai Perwakilan Anggota (Hanya Pemilih).`;
   } else if (is_pensiun_warning) {
     alasan_hak_dipilih = `Tidak memenuhi syarat dicalonkan karena sisa masa pensiun ${sisa_pensiun_text || `${sisa_pensiun_tahun} tahun`} (< 4 tahun menuju pensiun usia 55). Anggota berstatus Hanya Pemilih.`;
   } else {
@@ -1085,9 +1109,9 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
     hak_pilih,
     hak_dipilih,
     alasan_hak_dipilih,
-    is_pengurus_bpk: pengurusCheck.isPengurusBPK,
+    is_pengurus_bpk: pengurusCheck.isPengurusBPK || dpsCheck.isDPS,
     is_pegawai: isPegawai,
-    tipe_pengurus_bpk: pengurusCheck.roleType
+    tipe_pengurus_bpk: pengurusCheck.roleType || (dpsCheck.isDPS ? 'DPS' : null)
   };
 }
 
@@ -1134,6 +1158,7 @@ export function reEvaluateAllMembersPension(): { total: number; warnings: number
 export function applyMemberQualificationLock(member: Member): Member {
   const isPegawai = checkPegawai(member.jabatan);
   const pengurusCheck = checkPengurusOrBPK(member.jabatan);
+  const dpsCheck = checkDPS(member.jabatan);
 
   // Calculate pension status inline (same logic as enrichMemberPension)
   let is_pensiun_warning = false;
@@ -1143,6 +1168,8 @@ export function applyMemberQualificationLock(member: Member): Member {
     alasan_hak_dipilih = 'Terdaftar sebagai Pegawai/Karyawan — Hanya Hak Memilih.';
   } else if (pengurusCheck.isPengurusBPK) {
     alasan_hak_dipilih = `Menjabat sebagai ${pengurusCheck.label} — Hanya Hak Memilih.`;
+  } else if (dpsCheck.isDPS) {
+    alasan_hak_dipilih = `Menjabat sebagai ${dpsCheck.label} — Hanya Hak Memilih.`;
   } else if (member.tanggal_lahir) {
     const dob = new Date(`${member.tanggal_lahir}T00:00:00`);
     if (!isNaN(dob.getTime())) {
@@ -1158,7 +1185,7 @@ export function applyMemberQualificationLock(member: Member): Member {
     }
   }
 
-  const hak_dipilih = !isPegawai && !pengurusCheck.isPengurusBPK && !is_pensiun_warning;
+  const hak_dipilih = !isPegawai && !pengurusCheck.isPengurusBPK && !dpsCheck.isDPS && !is_pensiun_warning;
   const hak_pilih = member.status === 'AKTIF';
 
   return {
@@ -1166,8 +1193,8 @@ export function applyMemberQualificationLock(member: Member): Member {
     hak_pilih,
     hak_dipilih,
     is_pegawai: isPegawai,
-    is_pengurus_bpk: pengurusCheck.isPengurusBPK,
-    tipe_pengurus_bpk: pengurusCheck.roleType,
+    is_pengurus_bpk: pengurusCheck.isPengurusBPK || dpsCheck.isDPS,
+    tipe_pengurus_bpk: pengurusCheck.roleType || (dpsCheck.isDPS ? 'DPS' : null),
     alasan_hak_dipilih,
     is_pensiun_warning
   };
