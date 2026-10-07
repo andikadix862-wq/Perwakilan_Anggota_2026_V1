@@ -947,11 +947,23 @@ export function checkPengurusOrBPK(jabatan?: string | null): PengurusBPKCheckSer
   if (!jabatan) return { isPengurusBPK: false, roleType: null, label: '' };
   const upper = String(jabatan).trim().toUpperCase();
 
+  // DPS: Dewan Pengawas Syariah (check FIRST before BPK since it contains "PENGAWAS")
+  if (
+    upper === 'DPS' ||
+    upper.includes('DEWAN PENGAWAS SYARIAH') ||
+    upper.includes('PENGAWAS SYARIAH')
+  ) {
+    return {
+      isPengurusBPK: true,
+      roleType: 'DPS',
+      label: 'Dewan Pengawas Syariah (DPS)'
+    };
+  }
+
   // BPK: Badan Pengawas Koperasi / Pengawas / BPK
   if (
     upper === 'BPK' ||
     upper.includes('BPK') ||
-    upper.includes('PENGAWAS') ||
     upper.includes('BADAN PENGAWAS')
   ) {
     return {
@@ -970,19 +982,6 @@ export function checkPengurusOrBPK(jabatan?: string | null): PengurusBPKCheckSer
       isPengurusBPK: true,
       roleType: 'PENGURUS',
       label: 'Pengurus Koperasi'
-    };
-  }
-
-  // DPS: Dewan Pengawas Syariah
-  if (
-    upper === 'DPS' ||
-    upper.includes('Dewan Pengawas Syariah') ||
-    upper.includes('PENGAWAS SYARIAH')
-  ) {
-    return {
-      isPengurusBPK: true,
-      roleType: 'DPS',
-      label: 'Dewan Pengawas Syariah (DPS)'
     };
   }
 
