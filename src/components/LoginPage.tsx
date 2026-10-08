@@ -83,13 +83,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     if (!isVotingPeriodOpen && votingConfig) {
       const startTime = votingConfig.voting_start;
       if (startTime) {
-        const start Date = new Date(startTime);
-        const formattedDate = start Date.toLocaleDateString('id-ID', {
+        const startDate = new Date(startTime);
+        const formattedDate = startDate.toLocaleDateString('id-ID', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
         });
-        const formattedTime = start Date.toLocaleTimeString('id-ID', {
+        const formattedTime = startDate.toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false
@@ -198,16 +198,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         <p className="text-xs text-amber-800 leading-relaxed">
                           Pemilihan untuk periode {votingConfig.periode_pemilihan || '2026'} akan dibuka pada{' '}
                           {(() => {
-                            const start Date = new Date(votingConfig.voting_start);
-                            return start Date.toLocaleDateString('id-ID', {
+                            const startDate = new Date(votingConfig.voting_start);
+                            return startDate.toLocaleDateString('id-ID', {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric'
                             });
                           })()} pukul{' '}
                           {(() => {
-                            const start Date = new Date(votingConfig.voting_start);
-                            return start Date.toLocaleTimeString('id-ID', {
+                            const startDate = new Date(votingConfig.voting_start);
+                            return startDate.toLocaleTimeString('id-ID', {
                               hour: '2-digit',
                               minute: '2-digit',
                               hour12: false
