@@ -105,26 +105,49 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
 }
 
 export async function upsertMember(member: Member): Promise<void> {
-  // First, check if member exists by email
+  const newEmail = member.email.toLowerCase();
+
+  // Check if member exists with a DIFFERENT email
   const { data: existing } = await supabase
     .from('members')
     .select('id, email')
-    .eq('email', member.email.toLowerCase())
+    .eq('email', newEmail)
     .single();
 
   if (existing) {
-    // Update existing member
+    // Member exists with this email, update it
     const { error } = await supabase
       .from('members')
       .update(member)
-      .eq('email', member.email.toLowerCase());
+      .eq('email', newEmail);
     if (error) throw error;
   } else {
-    // Insert new member
-    const { error } = await supabase
+    // Check if member exists with a different email
+    const { data: existingDifferent } = await supabase
       .from('members')
-      .insert(member);
-    if (error) throw error;
+      .select('id, email')
+      .eq('nomor_anggota', member.nomor_anggota?.toUpperCase())
+      .single();
+
+    if (existingDifferent && existingDifferent.email !== newEmail) {
+      // Member exists with different email, delete old and insert new
+      const { error: deleteError } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', existingDifferent.id);
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from('members')
+        .insert(member);
+      if (insertError) throw insertError;
+    } else {
+      // Insert new member
+      const { error } = await supabase
+        .from('members')
+        .insert(member);
+      if (error) throw error;
+    }
   }
 }
 
