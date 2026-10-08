@@ -105,8 +105,27 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
 }
 
 export async function upsertMember(member: Member): Promise<void> {
-  const { error } = await supabase.from('members').upsert(member, { onConflict: 'email' });
-  if (error) throw error;
+  // First, check if member exists by email
+  const { data: existing } = await supabase
+    .from('members')
+    .select('id, email')
+    .eq('email', member.email.toLowerCase())
+    .single();
+
+  if (existing) {
+    // Update existing member
+    const { error } = await supabase
+      .from('members')
+      .update(member)
+      .eq('email', member.email.toLowerCase());
+    if (error) throw error;
+  } else {
+    // Insert new member
+    const { error } = await supabase
+      .from('members')
+      .insert(member);
+    if (error) throw error;
+  }
 }
 
 export async function deleteMember(email: string): Promise<{ success: boolean; message?: string; memberName?: string }> {
