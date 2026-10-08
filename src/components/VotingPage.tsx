@@ -63,7 +63,6 @@ export const VotingPage: React.FC<VotingPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [votingStatus, setVotingStatus] = useState<string>('DITUTUP');
   
   // Toast notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -88,7 +87,6 @@ export const VotingPage: React.FC<VotingPageProps> = ({
           api.getVoterCandidates(member.email)
         ]);
         setDashboardData(dashRes);
-        setVotingStatus(dashRes?.config?.voting_status || 'DITUTUP');
 
         // STRICT DIVISION FILTERING:
         // Ensure ALL candidates/members from the voter's division are retained
@@ -111,33 +109,6 @@ export const VotingPage: React.FC<VotingPageProps> = ({
 
   const kuotaKursi = dashboardData?.division_info.kuota_kursi || 1;
   const totalAnggotaBagian = dashboardData?.division_info.total_anggota_bagian || candidates.length || 0;
-  const isVotingOpen = votingStatus === 'AKTIF';
-
-  // Show voting closed message if period is not active
-  if (!isVotingOpen && !loading) {
-    return (
-      <div className="max-w-2xl mx-auto py-10 px-4">
-        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-amber-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Periode Pemilihan Sedang DITUTUP
-          </h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Pemilihan untuk periode {dashboardData?.config?.periode_pemilihan || '2026'} sedang dalam masa penutupan.
-            Silakan kembali nanti ketika periode pemilihan dibuka.
-          </p>
-          <button
-            onClick={onBack}
-            className="px-6 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider transition-all"
-          >
-            Kembali ke Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // Helper to determine candidate retirement & eligibility status
   const isCandidateEligibleToVote = (cand: Candidate): boolean => {
@@ -170,10 +141,6 @@ export const VotingPage: React.FC<VotingPageProps> = ({
     }
     if (!token) {
       showToast('Sesi tidak valid. Silakan login kembali.', 'error');
-      return;
-    }
-    if (votingStatus !== 'AKTIF') {
-      showToast('Periode pemilihan sedang ditutup. Tidak dapat mengirim suara.', 'error');
       return;
     }
 

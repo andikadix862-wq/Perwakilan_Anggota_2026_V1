@@ -22,6 +22,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [votingConfig, setVotingConfig] = useState<any>(null);
+  const [isVotingPeriodOpen, setIsVotingPeriodOpen] = useState(true);
 
   const [availableData, setAvailableData] = useState<{
     admins: any[];
@@ -49,6 +51,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   });
 
   useEffect(() => {
+    // Fetch voting config to check if voting period is open
+    api.getConfig().then(res => {
+      if (res && res.config) {
+        setVotingConfig(res.config);
+        const status = res.config.voting_status || 'DITUTUP';
+        setIsVotingPeriodOpen(status === 'AKTIF');
+      }
+    }).catch(() => {
+      // If config fetch fails, allow login (default behavior)
+    });
+
     api.getAvailableUsers().then(res => {
       if (res.success) {
         setAvailableData({
@@ -65,6 +78,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   const handleLogin = async (targetEmail: string) => {
     const cleanEmail = targetEmail.trim();
+
+    // Check if voting period is open
+    if (!isVotingPeriodOpen && votingConfig) {
+      const startTime = votingConfig.voting_start;
+      if (startTime) {
+        const start Date = new Date(startTime);
+        const formattedDate = start Date.toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        const formattedTime = start Date.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        setErrorTitle('PERIODE PEMILIHAN BELUM DIBUKA');
+        setErrorMessage(
+          `Pemilihan untuk periode ${votingConfig.periode_pemilihan || '2026'} akan dibuka pada ${formattedDate} pukul ${formattedTime} WIB.` +
+          '\n\nSilakan coba kembali setelah periode pemilihan dimulai.'
+        );
+      } else {
+        setErrorTitle('PERIODE PEMILIHAN BELUM DIBUKA');
+        setErrorMessage('Periode pemilihan saat ini sedang ditutup. Silakan hubungi administrator untuk informasi lebih lanjut.');
+      }
+      return;
+    }
+
     if (!cleanEmail) {
       setErrorTitle('AKSES DITOLAK');
       setErrorMessage('Silakan masukkan alamat email yang terdaftar pada database koperasi.');
@@ -146,6 +187,41 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
               {/* Section Header: MASUK DENGAN EMAIL TERDAFTAR */}
               <div className="mt-8 pt-6 border-t border-gray-100">
+                {!isVotingPeriodOpen && votingConfig ? (
+                  <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+                    <div className="flex items-start gap-3">
+                      <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="font-bold text-sm uppercase tracking-wider mb-1">
+                          Periode Pemilihan Belum Dibuka
+                        </h3>
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          Pemilihan untuk periode {votingConfig.periode_pemilihan || '2026'} akan dibuka pada{' '}
+                          {(() => {
+                            const start Date = new Date(votingConfig.voting_start);
+                            return start Date.toLocaleDateString('id-ID', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            });
+                          })()} pukul{' '}
+                          {(() => {
+                            const start Date = new Date(votingConfig.voting_start);
+                            return start Date.toLocaleTimeString('id-ID', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false
+                            });
+                          })()} WIB.
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Sistem akan membuka akses/login setelah periode pemilihan dimulai.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
                 <h2 className="text-xs font-bold uppercase tracking-wider text-[#1E3A8A] mb-1">
                   MASUK DENGAN EMAIL TERDAFTAR
                 </h2>
