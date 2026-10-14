@@ -115,10 +115,23 @@ export async function upsertMember(member: Member): Promise<void> {
     .single();
 
   if (existing) {
-    // Member exists with this email, just update
+    // Member exists with this email, update specific fields only
     const { error } = await supabase
       .from('members')
-      .update(member)
+      .update({
+        nomor_anggota: member.nomor_anggota?.toUpperCase(),
+        nama: member.nama,
+        nik: member.nik || '',
+        bagian_id: member.bagian_id,
+        nama_bagian: member.nama_bagian || member.bagian_id,
+        status: member.status || 'AKTIF',
+        hak_pilih: member.hak_pilih !== undefined ? member.hak_pilih : true,
+        status_memilih: member.status_memilih || 'BELUM_MEMILIH',
+        tanggal_lahir: member.tanggal_lahir || null,
+        tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
+        jabatan: member.jabatan || 'Anggota',
+        telepon: member.telepon || ''
+      })
       .eq('email', newEmail);
     if (error) throw error;
   } else {
@@ -130,17 +143,46 @@ export async function upsertMember(member: Member): Promise<void> {
       .single();
 
     if (existingDifferent && existingDifferent.email !== newEmail) {
-      // Member exists with different email - update the email field instead of delete/insert
+      // Member exists with different email - update the email and other fields
       const { error } = await supabase
         .from('members')
-        .update({ ...member, email: newEmail })
+        .update({
+          email: newEmail,
+          nomor_anggota: member.nomor_anggota?.toUpperCase(),
+          nama: member.nama,
+          nik: member.nik || '',
+          bagian_id: member.bagian_id,
+          nama_bagian: member.nama_bagian || member.bagian_id,
+          status: member.status || 'AKTIF',
+          hak_pilih: member.hak_pilih !== undefined ? member.hak_pilih : true,
+          status_memilih: member.status_memilih || 'BELUM_MEMILIH',
+          tanggal_lahir: member.tanggal_lahir || null,
+          tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
+          jabatan: member.jabatan || 'Anggota',
+          telepon: member.telepon || ''
+        })
         .eq('id', existingDifferent.id);
       if (error) throw error;
     } else {
       // New member, insert
       const { error } = await supabase
         .from('members')
-        .insert(member);
+        .insert({
+          email: newEmail,
+          nomor_anggota: member.nomor_anggota?.toUpperCase(),
+          nama: member.nama,
+          nik: member.nik || '',
+          bagian_id: member.bagian_id,
+          nama_bagian: member.nama_bagian || member.bagian_id,
+          status: member.status || 'AKTIF',
+          hak_pilih: member.hak_pilih !== undefined ? member.hak_pilih : true,
+          status_memilih: member.status_memilih || 'BELUM_MEMILIH',
+          tanggal_lahir: member.tanggal_lahir || null,
+          tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
+          jabatan: member.jabatan || 'Anggota',
+          telepon: member.telepon || '',
+          created_at: new Date().toISOString()
+        });
       if (error) throw error;
     }
   }
