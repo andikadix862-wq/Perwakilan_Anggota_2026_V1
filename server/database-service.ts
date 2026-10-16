@@ -115,7 +115,7 @@ export async function upsertMember(member: Member): Promise<void> {
     .single();
 
   if (existing) {
-    // Member exists with this email, update specific fields only
+    // Same email - safe to update in place
     const { error } = await supabase
       .from('members')
       .update({
@@ -135,7 +135,7 @@ export async function upsertMember(member: Member): Promise<void> {
       .eq('email', newEmail);
     if (error) throw error;
   } else {
-    // Check if member exists with a different email (same member)
+    // Check if member exists with a different email
     const { data: existingDifferent } = await supabase
       .from('members')
       .select('id, email')
@@ -143,10 +143,16 @@ export async function upsertMember(member: Member): Promise<void> {
       .single();
 
     if (existingDifferent && existingDifferent.email !== newEmail) {
-      // Member exists with different email - update the email and other fields
-      const { error } = await supabase
+      // Email changed - delete old and insert new to avoid PK conflict
+      const { error: deleteError } = await supabase
         .from('members')
-        .update({
+        .delete()
+        .eq('id', existingDifferent.id);
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from('members')
+        .insert({
           email: newEmail,
           nomor_anggota: member.nomor_anggota?.toUpperCase(),
           nama: member.nama,
@@ -159,10 +165,10 @@ export async function upsertMember(member: Member): Promise<void> {
           tanggal_lahir: member.tanggal_lahir || null,
           tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
           jabatan: member.jabatan || 'Anggota',
-          telepon: member.telepon || ''
-        })
-        .eq('id', existingDifferent.id);
-      if (error) throw error;
+          telepon: member.telepon || '',
+          created_at: existingDifferent.created_at || new Date().toISOString()
+        });
+      if (insertError) throw insertError;
     } else {
       // New member, insert
       const { error } = await supabase
