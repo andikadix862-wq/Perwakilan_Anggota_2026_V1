@@ -98,7 +98,8 @@ export const IndonesianDateTimePicker: React.FC<IndonesianDateTimePickerProps> =
 
   // Combine and emit change
   const emitChange = (y: number, m: number, d: number, h: number, min: number) => {
-    const newDate = new Date(y, m, d, h, min, 0, 0);
+    // Create date in UTC to avoid timezone conversion issues
+    const newDate = new Date(Date.UTC(y, m, d, h, min, 0, 0));
     if (!isNaN(newDate.getTime())) {
       setInputError(null);
       setTextInput(toIndonesianFormat(newDate));
@@ -178,12 +179,12 @@ export const IndonesianDateTimePicker: React.FC<IndonesianDateTimePickerProps> =
   // Preset shortcut applicator
   const applyPreset = (daysFromNow: number, targetHour: number, targetMinute: number) => {
     const target = new Date();
-    target.setDate(target.getDate() + daysFromNow);
-    target.setHours(targetHour, targetMinute, 0, 0);
+    target.setUTCDate(target.getUTCDate() + daysFromNow);
+    target.setUTCHours(targetHour, targetMinute, 0, 0);
 
     const formatted = toIndonesianFormat(target);
     setTextInput(formatted);
-    setDatePart(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`);
+    setDatePart(`${target.getUTCFullYear()}-${pad(target.getUTCMonth() + 1)}-${pad(target.getUTCDate())}`);
     setHourPart(pad(targetHour));
     setMinutePart(pad(targetMinute));
     setInputError(null);
