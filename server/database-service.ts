@@ -107,15 +107,15 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
 export async function upsertMember(member: Member): Promise<void> {
   const newEmail = member.email.toLowerCase();
 
-  // First, get the full member record to find the existing ID
+  // Check if member exists with this email
   const { data: existing } = await supabase
     .from('members')
-    .select('id, email')
+    .select('id, email, created_at')
     .eq('email', newEmail)
     .single();
 
   if (existing) {
-    // Member exists - update by ID using eq on id column
+    // Member exists - update by ID
     const { error } = await supabase
       .from('members')
       .update({
@@ -143,16 +143,11 @@ export async function upsertMember(member: Member): Promise<void> {
       .single();
 
     if (existingByNoAgt && existingByNoAgt.email !== newEmail) {
-      // Email changed - delete by ID and insert new
-      const { error: deleteError } = await supabase
+      // Email changed - use Supabase upsert with onConflict on email
+      // This handles the case where the old email record needs to be replaced
+      const { error } = await supabase
         .from('members')
-        .delete()
-        .eq('id', existingByNoAgt.id);
-      if (deleteError) throw deleteError;
-
-      const { error: insertError } = await supabase
-        .from('members')
-        .insert({
+        .upsert({
           email: newEmail,
           nomor_anggota: member.nomor_anggota?.toUpperCase(),
           nama: member.nama,
@@ -166,9 +161,11 @@ export async function upsertMember(member: Member): Promise<void> {
           tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
           jabatan: member.jabatan || 'Anggota',
           telepon: member.telepon || '',
-          created_at: existingByNoAgt.created_at || new Date().toISOString()
+          created_at: existingByNoAgt.created_at
+        }, {
+          onConflict: 'email'
         });
-      if (insertError) throw insertError;
+      if (error) throw error;
     } else {
       // New member, insert
       const { error } = await supabase
