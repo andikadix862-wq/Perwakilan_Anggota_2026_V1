@@ -107,7 +107,7 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
 export async function upsertMember(member: Member): Promise<void> {
   const newEmail = member.email.toLowerCase();
 
-  // Check if member exists with this email
+  // First, get the full member record to find the existing ID
   const { data: existing } = await supabase
     .from('members')
     .select('id, email')
@@ -115,7 +115,7 @@ export async function upsertMember(member: Member): Promise<void> {
     .single();
 
   if (existing) {
-    // Same email - safe to update in place
+    // Member exists - update by ID using eq on id column
     const { error } = await supabase
       .from('members')
       .update({
@@ -132,22 +132,22 @@ export async function upsertMember(member: Member): Promise<void> {
         jabatan: member.jabatan || 'Anggota',
         telepon: member.telepon || ''
       })
-      .eq('email', newEmail);
+      .eq('id', existing.id);
     if (error) throw error;
   } else {
-    // Check if member exists with a different email
-    const { data: existingDifferent } = await supabase
+    // Check if member exists with same nomor_anggota but different email
+    const { data: existingByNoAgt } = await supabase
       .from('members')
-      .select('id, email')
+      .select('id, email, created_at')
       .eq('nomor_anggota', member.nomor_anggota?.toUpperCase())
       .single();
 
-    if (existingDifferent && existingDifferent.email !== newEmail) {
-      // Email changed - delete old and insert new to avoid PK conflict
+    if (existingByNoAgt && existingByNoAgt.email !== newEmail) {
+      // Email changed - delete by ID and insert new
       const { error: deleteError } = await supabase
         .from('members')
         .delete()
-        .eq('id', existingDifferent.id);
+        .eq('id', existingByNoAgt.id);
       if (deleteError) throw deleteError;
 
       const { error: insertError } = await supabase
@@ -166,7 +166,7 @@ export async function upsertMember(member: Member): Promise<void> {
           tanggal_pensiun: member.tanggal_pensiun || '2036-01-01',
           jabatan: member.jabatan || 'Anggota',
           telepon: member.telepon || '',
-          created_at: existingDifferent.created_at || new Date().toISOString()
+          created_at: existingByNoAgt.created_at || new Date().toISOString()
         });
       if (insertError) throw insertError;
     } else {
