@@ -56,6 +56,8 @@ export interface Candidate {
   status_kandidat: CandidateStatus;
   memenuhi_syarat: boolean;
   alasan_syarat?: string;
+  cannotVote?: boolean;
+  cannotVoteReason?: 'PENSION' | 'PEGAWAI' | 'PENGURUS_BPK' | 'DPS' | null;
   foto?: string;
   nomor_urut: number;
   visi_misi?: string;

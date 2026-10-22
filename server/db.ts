@@ -1110,7 +1110,8 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
     alasan_hak_dipilih,
     is_pengurus_bpk: pengurusCheck.isPengurusBPK || dpsCheck.isDPS,
     is_pegawai: isPegawai,
-    tipe_pengurus_bpk: pengurusCheck.roleType || (dpsCheck.isDPS ? 'DPS' : null)
+    tipe_pengurus_bpk: pengurusCheck.roleType || (dpsCheck.isDPS ? 'DPS' : null),
+    cannotVoteReason: member.status !== 'AKTIF' ? 'NONAKTIF' : (isPegawai ? 'PEGAWAI' : (pengurusCheck.isPengurusBPK ? 'PENGURUS_BPK' : (dpsCheck.isDPS ? 'DPS' : (is_pensiun_warning ? 'PENSION' : None))))
   };
 }
 
