@@ -67,7 +67,7 @@ import {
   saveDatabaseToFile,
   getDatabase,
 } from './server/db';
-import { deleteMember, upsertMember, syncCandidatesToSupabase, getMemberByEmail } from './server/database-service';
+import { deleteMember as deleteMemberRelational, upsertMember as upsertMemberRelational, syncCandidatesToSupabase, getMemberByEmail } from './server/database-service';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
 import { calculateQuota } from './server/quotaService';
