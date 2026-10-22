@@ -67,7 +67,7 @@ import {
   saveDatabaseToFile,
   getDatabase,
 } from './server/db';
-import { deleteMember as deleteMemberRelational, upsertMember as upsertMemberRelational, syncCandidatesToSupabase } from './server/database-service';
+import { deleteMember, upsertMember, syncCandidatesToSupabase, getMemberByEmail } from './server/database-service';
 import { processVoteSubmission } from './server/votingService';
 import { runAllSystemTests } from './server/testRunner';
 import { calculateQuota } from './server/quotaService';
@@ -961,7 +961,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
         }
 
         // Check if member exists
-        const existing = await getMemberByEmailRelational(rawEmail);
+        const existing = await getMemberByEmail(rawEmail);
         
         // Build member object
         const member = {
@@ -981,7 +981,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
           created_at: existing ? undefined : new Date().toISOString()
         };
 
-        await upsertMemberRelational(member);
+        await upsertMember(member);
         if (existing) {
           updated++;
         } else {
