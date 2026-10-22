@@ -393,7 +393,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       const config = await getAllConfig();
       const allMembers = await getAllMembers();
       const divisionMembers = allMembers.filter(m => m.bagian_id === member.bagian_id);
-      const divisionQuota = calculateQuota(divisionMembers.length, config.ratio_anggota_perwakilan || 10);
+
+      // Get division info to check for manual quota
+      let divisionQuota = calculateQuota(divisionMembers.length, config.ratio_anggota_perwakilan || 10);
+      try {
+        const divisions = await getAllDivisions();
+        const divInfo = divisions.find((d: any) => d.bagian_id === member.bagian_id);
+        if (divInfo && divInfo.manual_kuota) {
+          divisionQuota = Number(divInfo.manual_kuota);
+        }
+      } catch (e) {
+        console.error('[voter/dashboard] Failed to fetch divisions for manual quota:', e);
+      }
 
       // Candidates in this division
       const divisionCandidates = (await getCandidatesByDivision(member.bagian_id)).filter(c => c.status_kandidat === 'AKTIF');
