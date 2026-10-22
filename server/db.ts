@@ -1458,6 +1458,17 @@ export function deleteDivision(
   syncDivisionStats();
   saveDatabaseToFile();
 
+  // Also delete from Supabase to persist across server restarts
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    supabase.from('divisions').delete().eq('bagian_id', cleanId).then((result) => {
+      if (result.error) {
+        console.error('[deleteDivision] Failed to delete from Supabase:', result.error);
+      } else {
+        console.log('[deleteDivision] Successfully deleted from Supabase:', cleanId);
+      }
+    });
+  }
+
   addAuditLog({
     user_email: adminEmail,
     user_role: 'ADMIN',
