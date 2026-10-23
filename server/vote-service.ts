@@ -190,14 +190,11 @@ async function getCandidateById(candidate_id: string): Promise<Candidate | null>
 }
 
 export async function getVoteByMember(email: string): Promise<VoteRecord | null> {
-  try {
-    const { data, error } = await supabase.from('votes')
-      .select('*')
-      .eq('member_email', email.toLowerCase())
-      .single();
-    if (error) return null;
-    return data as VoteRecord;
-  } catch { return null; }
+  // Use local database instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  syncCandidatesWithMembers();
+  const db = getDatabase();
+  return db.votes.find(v => v.member_email.toLowerCase() === email.toLowerCase()) || null;
 }
 
 // ===================== ADMIN QUERIES =====================
