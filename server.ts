@@ -109,7 +109,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Public Divisions Master Data (read-only quota & seat allocation)
-  app.get('/api/divisions', (req, res) => {
+  app.get('/api/divisions', async (req, res) => {
     const divisions = await getDivisions();
     res.json({ success: true, divisions });
   });
@@ -1010,7 +1010,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Re-evaluate Pension & Qualification for All Members
   app.post('/api/admin/members/re-evaluate', async (req, res) => {
-    const stats = reEvaluateAllMembersPension();
+    const stats = await reEvaluateAllMembersPension();
     // Sync candidates to Supabase after re-evaluation
     try {
       const db = getDatabase();
@@ -1111,7 +1111,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   });
 
   // Divisions List with Quotas
-  app.get('/api/admin/divisions', (req, res) => {
+  app.get('/api/admin/divisions', async (req, res) => {
     const divisions = await getDivisions();
     res.json({ success: true, divisions });
   });

@@ -547,7 +547,7 @@ export function getDatabase(): DatabaseState {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
       dbState = JSON.parse(data);
       if (dbState) {
-        reEvaluateAllMembersPension();
+        await reEvaluateAllMembersPension();
         return dbState;
       }
     } catch (e) {
@@ -556,7 +556,7 @@ export function getDatabase(): DatabaseState {
   }
 
   dbState = generateInitialSeed();
-  reEvaluateAllMembersPension();
+  await reEvaluateAllMembersPension();
   return dbState;
 }
 
