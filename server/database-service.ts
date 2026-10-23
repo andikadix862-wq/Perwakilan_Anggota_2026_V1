@@ -343,25 +343,34 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   // Get counts from database
   const { count: totalMembers } = await supabase.from('members').select('*', { count: 'exact', head: true });
   const { count: votedMembers } = await supabase.from('members').select('*', { count: 'exact', head: true }).eq('status_memilih', 'SUDAH_MEMILIH');
+
+  // Get all members grouped by division for accurate counts
+  const { data: allMembers } = await supabase.from('members').select('bagian_id');
+  const memberCountsByDiv: Record<string, number> = {};
+  for (const m of (allMembers || [])) {
+    memberCountsByDiv[m.bagian_id] = (memberCountsByDiv[m.bagian_id] || 0) + 1;
+  }
+
   const { count: totalCandidates } = await supabase.from('candidates').select('*', { count: 'exact', head: true }).eq('memenuhi_syarat', true);
   const { count: totalDivisions } = await supabase.from('divisions').select('*', { count: 'exact', head: true });
   const { count: totalVotes } = await supabase.from('votes').select('*', { count: 'exact', head: true });
-  
+
   const total = totalMembers || 0;
   const voted = votedMembers || 0;
   const participationPercent = total > 0 ? Math.round((voted / total) * 100) : 0;
-  
-  // Get divisions with stats
+
+  // Get divisions with ACCURATE member counts from members table
   const divisions = await getAllDivisions();
   const divisionsSummary = await Promise.all(divisions.map(async (d) => {
+    const membersInDiv = memberCountsByDiv[d.bagian_id] || 0;
     const { count: votedInDiv } = await supabase.from('votes').select('*', { count: 'exact', head: true }).eq('division_id', d.bagian_id);
-    const { count: membersInDiv } = await supabase.from('members').select('*', { count: 'exact', head: true }).eq('bagian_id', d.bagian_id);
-    
+
     return {
       ...d,
+      total_anggota: membersInDiv,
       sudah_memilih: votedInDiv || 0,
-      belum_memilih: (membersInDiv || 0) - (votedInDiv || 0),
-      partisipasi_persen: membersInDiv > 0 ? Math.round(((votedInDiv || 0) / membersInDiv) * 100) : 0
+      belum_memilih: membersInDiv - (votedInDiv || 0),
+      partisipasi_persen: membersInDiv > 0 ? Math.round(((votedInDiv || 0) / membersInDiv) * 1000) / 10 : 0
     };
   }));
   
