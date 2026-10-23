@@ -183,14 +183,10 @@ async function getMemberByEmail(email: string): Promise<Member | null> {
 }
 
 async function getCandidateById(candidate_id: string): Promise<Candidate | null> {
-  try {
-    const { data, error } = await supabase.from('candidates')
-      .select('kandidat_id, nama, bagian_id, status_kandidat')
-      .eq('kandidat_id', candidate_id)
-      .single();
-    if (error) return null;
-    return data as Candidate;
-  } catch { return null; }
+  // Use local database (same as admin API) instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers, getCandidateById: localGetCandidateById } = await import('./db');
+  syncCandidatesWithMembers();
+  return localGetCandidateById(candidate_id) || null;
 }
 
 export async function getVoteByMember(email: string): Promise<VoteRecord | null> {
