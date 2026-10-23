@@ -195,7 +195,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       }
 
       // Sync division stats and member vote status with DB votes
-      syncDivisionStats();
+      await syncDivisionStats();
       const updatedMember = await getMemberByEmailRelational(cleanEmail);
       if (updatedMember) {
         member = updatedMember;
@@ -365,7 +365,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
       return res.json({ success: true, type: 'admin', user: admin });
     }
 
-    syncDivisionStats();
+    await syncDivisionStats();
     const member = await getMemberByEmailRelational(cleanEmail);
     if (member) {
       return res.json({ success: true, type: 'member', user: member });

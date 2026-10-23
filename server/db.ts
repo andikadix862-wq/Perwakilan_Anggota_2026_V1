@@ -747,15 +747,31 @@ export function syncCandidatesWithMembers(): void {
   dbState.candidates = newCandidates;
 }
 
-export function syncDivisionStats(): void {
+export async function syncDivisionStats(): Promise<void> {
   if (!dbState) return;
   const ratio = dbState.config.ratio_anggota_perwakilan || 10;
-  
-  // 1. Gather all valid vote transactions
+
+  // 1. Load votes from Supabase to ensure we have current data
+  try {
+    const { getAllVotes } = await import('./database-service');
+    const supabaseVotes = await getAllVotes();
+    // Sync votes from Supabase into dbState
+    const existingVoteIds = new Set((dbState.votes || []).map(v => v.vote_id));
+    for (const vote of supabaseVotes) {
+      if (!existingVoteIds.has(vote.vote_id)) {
+        if (!dbState.votes) dbState.votes = [];
+        dbState.votes.push(vote);
+      }
+    }
+  } catch (err) {
+    console.error('[syncDivisionStats] Failed to load votes from Supabase:', err);
+  }
+
+  // 2. Gather all valid vote transactions
   const validVotes = (dbState.votes || []).filter(v => v.status === 'VALID');
   const validTxSet = new Set(validVotes.map(v => v.transaction_id).filter(Boolean));
 
-  // 2. Sync member status_memilih with valid vote transactions
+  // 3. Sync member status_memilih with valid vote transactions
   if (dbState.members) {
     for (const m of dbState.members) {
       if (m.transaction_id && validTxSet.has(m.transaction_id)) {
@@ -764,7 +780,7 @@ export function syncDivisionStats(): void {
     }
   }
 
-  // 3. Sync division statistics
+  // 4. Sync division statistics
   dbState.divisions = (dbState.divisions || []).map(d => {
     const divisionMembers = (dbState!.members || []).filter(m => m.bagian_id === d.bagian_id);
     const count = divisionMembers.length;
@@ -780,7 +796,7 @@ export function syncDivisionStats(): void {
     const sudah = Math.max(sudahByMembers, divTxSet.size);
     const belum = Math.max(0, count - sudah);
     const partisipasi = count > 0 ? Math.round((sudah / count) * 1000) / 10 : 0;
-    
+
     return {
       ...d,
       total_anggota: count,
@@ -1140,7 +1156,7 @@ export function reEvaluateAllMembersPension(): { total: number; warnings: number
   });
 
   syncCandidatesWithMembers();
-  syncDivisionStats();
+  await syncDivisionStats();
   saveDatabaseToFile();
 
   return {
@@ -1223,15 +1239,15 @@ export function getMemberByNik(nik: string): Member | undefined {
   return enrichMemberPension(m, refDate);
 }
 
-export function getDivisions(): Division[] {
+export async function getDivisions(): Promise<Division[]> {
   const db = getDatabase();
-  syncDivisionStats();
+  await syncDivisionStats();
   return db.divisions;
 }
 
-export function getDivisionById(id: string): Division | undefined {
+export async function getDivisionById(id: string): Promise<Division | undefined> {
   const db = getDatabase();
-  syncDivisionStats();
+  await syncDivisionStats();
   return db.divisions.find(d => d.bagian_id === id);
 }
 
@@ -1335,7 +1351,7 @@ export async function upsertDivision(
     };
 
     db.divisions[existingIndex] = updatedDivision;
-    syncDivisionStats();
+    await syncDivisionStats();
     saveDatabaseToFile();
 
     // Also persist to relational divisions table
@@ -1408,7 +1424,7 @@ export async function upsertDivision(
     };
 
     db.divisions.push(newDiv);
-    syncDivisionStats();
+    await syncDivisionStats();
     saveDatabaseToFile();
 
     addAuditLog({
@@ -1455,7 +1471,7 @@ export function deleteDivision(
   }
 
   const removed = db.divisions.splice(idx, 1)[0];
-  syncDivisionStats();
+  await syncDivisionStats();
   saveDatabaseToFile();
 
   // Also delete from Supabase to persist across server restarts
@@ -1547,7 +1563,7 @@ export function getConfig(): ElectionConfig {
 export async function updateConfig(newConfig: Partial<ElectionConfig>, adminEmail = 'admin'): Promise<ElectionConfig> {
   const db = getDatabase();
   db.config = { ...db.config, ...newConfig };
-  syncDivisionStats();
+  await syncDivisionStats();
   saveDatabaseToFile();
 
   // Save config to Supabase relational table with await
@@ -1961,7 +1977,7 @@ export function deleteMember(email: string, adminEmail = 'admin'): { success: bo
   db.candidates = db.candidates.filter(c => !(c.nik === deleted.nik || c.nomor_anggota === deleted.nomor_anggota));
   db.votes = db.votes.filter(v => v.member_email !== deleted.email);
   saveDatabaseToFile();
-  syncDivisionStats();
+  await syncDivisionStats();
 
   addAuditLog({
     user_email: adminEmail,
@@ -2018,7 +2034,7 @@ export async function resetMemberVotingStatus(identifier: string, adminEmail = '
     (!v.voter_nik || v.voter_nik.toUpperCase() !== memberNik.toUpperCase())
   );
 
-  syncDivisionStats();
+  await syncDivisionStats();
   syncCandidatesWithMembers();
   saveDatabaseToFile();
 
@@ -2093,7 +2109,7 @@ export async function resetAllVotes(adminEmail = 'admin@kopsyah-ykk.id'): Promis
   }
 
   // 4. Sync division stats and candidates
-  syncDivisionStats();
+  await syncDivisionStats();
   syncCandidatesWithMembers();
   saveDatabaseToFile();
 
@@ -2263,7 +2279,7 @@ export function clearDummyData(adminEmail = 'admin@kopsyah-ykk.id'): {
 // Get Dashboard Statistics
 export function getDashboardStats(): DashboardStats {
   const db = getDatabase();
-  syncDivisionStats();
+  await syncDivisionStats();
 
   const total_anggota = db.members.length;
   const total_berhak_memilih = db.members.filter(m => m.hak_pilih).length;
@@ -2306,7 +2322,7 @@ export function getDashboardStats(): DashboardStats {
 // ASYNC VERSION: Queries Supabase directly for votes (serverless-compatible)
 export async function calculateResults(): Promise<DivisionResult[]> {
   const db = getDatabase();
-  syncDivisionStats();
+  await syncDivisionStats();
   syncCandidatesWithMembers();
 
   // Load votes from Supabase
@@ -2442,7 +2458,7 @@ export async function calculateResults(): Promise<DivisionResult[]> {
 // SYNC VERSION: For backward compatibility (uses in-memory dbState.votes)
 function calculateResultsSync(): DivisionResult[] {
   const db = getDatabase();
-  syncDivisionStats();
+  await syncDivisionStats();
   syncCandidatesWithMembers();
 
   const results: DivisionResult[] = [];
