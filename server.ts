@@ -110,7 +110,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Public Divisions Master Data (read-only quota & seat allocation)
   app.get('/api/divisions', (req, res) => {
-    const divisions = getDivisions();
+    const divisions = await getDivisions();
     res.json({ success: true, divisions });
   });
 
@@ -1112,7 +1112,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Divisions List with Quotas
   app.get('/api/admin/divisions', (req, res) => {
-    const divisions = getDivisions();
+    const divisions = await getDivisions();
     res.json({ success: true, divisions });
   });
 

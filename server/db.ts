@@ -1133,7 +1133,7 @@ export function enrichMemberPension(member: Member, refDateInput?: string | Date
 
 // ----------------- ABSTRACTION LAYER -----------------
 
-export function reEvaluateAllMembersPension(): { total: number; warnings: number; eligible: number; pengurus_bpk: number } {
+export async function reEvaluateAllMembersPension(): Promise<{ total: number; warnings: number; eligible: number; pengurus_bpk: number }> {
   if (!dbState) {
     getDatabase();
   }
