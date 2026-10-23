@@ -200,34 +200,36 @@ export async function getVoteByMember(email: string): Promise<VoteRecord | null>
 // ===================== ADMIN QUERIES =====================
 
 export async function getAllVotes(): Promise<VoteRecord[]> {
-  const { data, error } = await supabase.from('votes')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) return [];
-  return (data || []) as VoteRecord[];
+  // Use local database instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  syncCandidatesWithMembers();
+  const db = getDatabase();
+  return [...db.votes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export async function getVotesByDivision(division_id: string): Promise<VoteRecord[]> {
-  const { data, error } = await supabase.from('votes')
-    .select('*')
-    .eq('division_id', division_id)
-    .order('created_at', { ascending: false });
-  if (error) return [];
-  return (data || []) as VoteRecord[];
+  // Use local database instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  syncCandidatesWithMembers();
+  const db = getDatabase();
+  return db.votes.filter(v => v.division_id === division_id)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export async function getVoteCount(): Promise<number> {
-  const { count, error } = await supabase.from('votes').select('*', { count: 'exact', head: true });
-  if (error) return 0;
-  return count || 0;
+  // Use local database instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  syncCandidatesWithMembers();
+  const db = getDatabase();
+  return db.votes.length;
 }
 
 export async function getVoteCountByDivision(division_id: string): Promise<number> {
-  const { count, error } = await supabase.from('votes')
-    .select('*', { count: 'exact', head: true })
-    .eq('division_id', division_id);
-  if (error) return 0;
-  return count || 0;
+  // Use local database instead of direct Supabase query
+  const { getDatabase, syncCandidatesWithMembers } = await import('./db');
+  syncCandidatesWithMembers();
+  const db = getDatabase();
+  return db.votes.filter(v => v.division_id === division_id).length;
 }
 
 // ===================== REALTIME SUBSCRIPTION =====================
