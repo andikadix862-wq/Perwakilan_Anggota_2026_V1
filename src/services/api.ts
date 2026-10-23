@@ -391,15 +391,18 @@ export const api = {
   // ---------------------------------------------------------------
 
   async getDashboard(adminEmail?: string): Promise<{ success: boolean; stats: DashboardStats }> {
-    const res = await fetch('/api/admin/dashboard', {
-      headers: getAdminRequestHeaders(adminEmail)
+    const res = await fetch('/api/admin/dashboard?t=' + Date.now(), {
+      headers: { ...getAdminRequestHeaders(adminEmail), 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
     });
     return handleJsonResponse(res);
   },
 
   // Alias untuk compatibility dengan frontend yang memanggil getAdminStats
   async getAdminStats(adminEmail?: string): Promise<{ success: boolean; stats: DashboardStats }> {
-    return this.getDashboard(adminEmail);
+    const res = await fetch('/api/admin/dashboard?t=' + Date.now(), {
+      headers: { ...getAdminRequestHeaders(adminEmail), 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    });
+    return handleJsonResponse(res);
   },
 
   async getResults(adminEmail?: string): Promise<{ success: boolean; results: DivisionResult[] }> {

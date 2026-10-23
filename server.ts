@@ -900,6 +900,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   // -------------------------------------------------------------
   // Executive Dashboard Stats
   app.get('/api/admin/dashboard', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     try {
       const stats = await getDashboardStatsRelational();
       res.json({ success: true, stats });
@@ -1220,6 +1221,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Election Results with Tie-Break Detection (PRD Section 21 & 22)
   app.get('/api/admin/results', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     try {
       const results = await calculateResults();
       const config = getConfig();
